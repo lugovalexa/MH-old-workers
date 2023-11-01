@@ -1,4 +1,4 @@
-def austria(row):
+def austria_age(row):
     # Male
     if row["gender"] == "Male":
         if row["yrscontribution"] + 65 - row["age"] >= 15:
@@ -14,5 +14,5 @@ def austria(row):
             return row["age"] + 15 - row["yrscontribution"]
 
 
-def hello(str):
-    print(str)
+def austria_change(row):
+    return 0

@@ -1,4 +1,4 @@
-def belgium(row):
+def belgium_age(row):
     # Male
     if row["gender"] == "Male":
         return 65
@@ -16,5 +16,9 @@ def belgium(row):
             return 65
 
 
-def hello2(str):
-    print(str)
+def belgium_change(row):
+    # Female
+    if row["wave"] == 2 or row["wave"] == 4:
+        return 1
+    else:
+        return 0
