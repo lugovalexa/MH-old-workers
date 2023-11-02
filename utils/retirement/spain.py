@@ -40,12 +40,6 @@ def spain_age(row):
 
 
 def spain_change(row):
-    # Waves 1-4
-    if row["wave"] < 5:
-        if row["yrscontribution"] + 65 - row["age"] >= 15:
-            return 65
-        else:
-            return row["age"] + 15 - row["yrscontribution"]
     # Wave 5
     if row["wave"] == 5:
         if row["yrscontribution"] + 65 - row["age"] >= 35.25:
