@@ -102,7 +102,7 @@ def italy_age(row):
                     return row["age"] + 5 - row["yrscontribution"]
         # Wave 4
         elif row["wave"] == 4:
-            if row["public_job"] == "Yes":
+            if row["job_status"] == "Public sector employee":
                 if row["yr1contribution"] < 1996:
                     if row["yrscontribution"] + 61 - row["age"] >= 20:
                         return 61
@@ -325,7 +325,7 @@ def italy_change(row):
     else:
         # Wave 4
         if row["wave"] == 4:
-            if row["public_job"] == "Yes":
+            if row["job_status"] == "Public sector employee":
                 if row["yrscontribution"] + 61 - row["age"] >= 20:
                     return 1
                 else:
