@@ -9,7 +9,6 @@ from .italy import *
 from .luxembourg import *
 from .netherlands import *
 from .poland import *
-from .portugal import *
 from .slovenia import *
 from .spain import *
 from .switzerland import *
