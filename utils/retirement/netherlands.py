@@ -13,3 +13,11 @@ def netherlands_change(row):
         return 1
     else:
         return 0
+
+
+def netherlands_change1(row):
+    # Wave 8
+    if row["wave"] == 8:
+        return 1
+    else:
+        return 0

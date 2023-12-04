@@ -399,3 +399,98 @@ def italy_change(row):
                     return 0
         else:
             return 0
+
+
+def italy_change1(row):
+    # Male
+    if row["gender"] == "Male":
+        # Wave 5
+        if row["wave"] == 5:
+            if row["yrscontribution"] + 66.25 - row["age"] >= 20:
+                return 0.25
+            else:
+                return 0
+        # Wave 7
+        elif row["wave"] == 7:
+            if row["yrscontribution"] + 66.58 - row["age"] >= 20:
+                return 0.33
+            else:
+                return 0
+        # Wave 8
+        elif row["wave"] == 8:
+            if row["yrscontribution"] + 67 - row["age"] >= 20:
+                return 0.42
+            else:
+                return 0
+        else:
+            return 0
+
+    # Female
+    else:
+        # Wave 5
+        if row["wave"] == 5:
+            if row["job_status"] == "Self-employed":
+                if row["yrscontribution"] + 63.75 - row["age"] >= 20:
+                    return 3.75
+                else:
+                    return 0
+            elif row["job_status"] == "Civil servant":
+                if row["yrscontribution"] + 66.25 - row["age"] >= 20:
+                    return 6.25
+                else:
+                    return 0
+            else:
+                if row["yrscontribution"] + 62.25 - row["age"] >= 20:
+                    return 2.25
+                else:
+                    return 0
+        # Wave 6
+        elif row["wave"] == 6:
+            if row["job_status"] == "Self-employed":
+                if row["yrscontribution"] + 64.75 - row["age"] >= 20:
+                    return 1
+                else:
+                    return 0
+            elif row["job_status"] == "Civil servant":
+                return 0
+            else:
+                if row["yrscontribution"] + 63.75 - row["age"] >= 20:
+                    return 1.5
+                else:
+                    return 0
+        # Wave 7
+        elif row["wave"] == 7:
+            if row["job_status"] == "Self-employed":
+                if row["yrscontribution"] + 66.08 - row["age"] >= 20:
+                    return 1.33
+                else:
+                    return 0
+            elif row["job_status"] == "Civil servant":
+                if row["yrscontribution"] + 66.58 - row["age"] >= 20:
+                    return 2.83
+                else:
+                    return 0
+            else:
+                if row["yrscontribution"] + 65.58 - row["age"] >= 20:
+                    return 1.83
+                else:
+                    return 0
+        # Wave 8
+        elif row["wave"] == 8:
+            if row["job_status"] == "Self-employed":
+                if row["yrscontribution"] + 67 - row["age"] >= 20:
+                    return 0.92
+                else:
+                    return 0
+            elif row["job_status"] == "Civil servant":
+                if row["yrscontribution"] + 67 - row["age"] >= 20:
+                    return 0.42
+                else:
+                    return 0
+            else:
+                if row["yrscontribution"] + 67 - row["age"] >= 20:
+                    return 1.42
+                else:
+                    return 0
+        else:
+            return 0

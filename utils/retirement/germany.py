@@ -97,3 +97,47 @@ def germany_change(row):
                 return 0
     else:
         return 0
+
+
+def germany_change1(row):
+    # Wave 5
+    if row["wave"] == 5:
+        if row["yrbirth"] >= 1963:
+            if row["yrscontribution"] + 67 - row["age"] >= 5:
+                return 2
+            else:
+                return 0
+        else:
+            if row["yrscontribution"] + 65.08 - row["age"] >= 5:
+                return 0.08
+            else:
+                return 0
+    # Wave 6
+    elif row["wave"] == 6:
+        if row["yrbirth"] >= 1963:
+            return 0
+        else:
+            if row["yrscontribution"] + 65.17 - row["age"] >= 5:
+                return 0.08
+            else:
+                return 0
+    # Wave 7
+    elif row["wave"] == 7:
+        if row["yrbirth"] >= 1963:
+            return 0
+        else:
+            if row["yrscontribution"] + 65.25 - row["age"] >= 5:
+                return 0.08
+            else:
+                return 0
+    # Wave 8
+    elif row["wave"] == 8:
+        if row["yrbirth"] >= 1963:
+            return 0
+        else:
+            if row["yrscontribution"] + 65.33 - row["age"] >= 5:
+                return 0.08
+            else:
+                return 0
+    else:
+        return 0

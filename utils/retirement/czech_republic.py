@@ -733,3 +733,242 @@ def czech_republic_change(row):
                     return 0
         else:
             return 0
+
+
+def czech_republic_change1(row):
+    # Male
+    if row["gender"] == "Male":
+        if row["wave"] == 5:
+            if row["yrscontribution"] + 62.5 - row["age"] >= 29:
+                return 62.5 - 62.17
+            elif row["age"] + 29 - row["yrscontribution"] < 65:
+                return 2
+            elif row["yrscontribution"] + 65 - row["age"] < 19:
+                return 2
+            else:
+                return 0
+        # Wave 6
+        elif row["wave"] == 6:
+            if row["yrscontribution"] + 62.83 - row["age"] >= 31:
+                return 62.83 - 62.5
+            elif row["age"] + 31 - row["yrscontribution"] < 62.83 + 5:
+                return 2
+            elif row["yrscontribution"] + 62.83 + 5 - row["age"] >= 20:
+                return 62.83 + 5 - 65
+            else:
+                return 1
+        # Wave 7
+        elif row["wave"] == 7:
+            if row["yrscontribution"] + 63.17 - row["age"] >= 33:
+                return 63.17 - 62.83
+            elif row["age"] + 33 - row["yrscontribution"] < 63.17 + 5:
+                return 2
+            elif row["yrscontribution"] + 63.17 + 5 - row["age"] >= 20:
+                return 63.17 + 5 - (62.83 + 5)
+            else:
+                return 0
+        # Wave 8
+        elif row["wave"] == 8:
+            if row["yrscontribution"] + 63.67 - row["age"] >= 35:
+                return 63.67 - 63.17
+            elif row["age"] + 35 - row["yrscontribution"] < 63.67 + 5:
+                return 2
+            elif row["yrscontribution"] + 63.67 + 5 - row["age"] >= 20:
+                return 63.67 + 5 - (63.17 + 5)
+            else:
+                return 0
+        else:
+            return 0
+
+    # Female
+    else:
+        # Wave 5
+        if row["wave"] == 5:
+            if row["nb_children"] == 0:
+                if row["yrscontribution"] + 61.67 - row["age"] >= 29:
+                    return 61.67 - 61
+                elif row["age"] + 29 - row["yrscontribution"] < 65:
+                    return 2
+                elif row["yrscontribution"] + 65 - row["age"] < 19:
+                    return 2
+                else:
+                    return 0
+            elif row["nb_children"] == 1:
+                if row["yrscontribution"] + 60.67 - row["age"] >= 29:
+                    return 60.67 - 60
+                elif row["age"] + 29 - row["yrscontribution"] < 65:
+                    return 2
+                elif row["yrscontribution"] + 65 - row["age"] < 19:
+                    return 2
+                else:
+                    return 0
+            elif row["nb_children"] == 2:
+                if row["yrscontribution"] + 59.67 - row["age"] >= 29:
+                    return 59.67 - 59
+                elif row["age"] + 29 - row["yrscontribution"] < 65:
+                    return 2
+                elif row["yrscontribution"] + 65 - row["age"] < 19:
+                    return 2
+                else:
+                    return 0
+            elif row["nb_children"] == 3 or row["nb_children"] == 4:
+                if row["yrscontribution"] + 58.67 - row["age"] >= 29:
+                    return 58.67 - 58
+                elif row["age"] + 29 - row["yrscontribution"] < 65:
+                    return 2
+                elif row["yrscontribution"] + 65 - row["age"] < 19:
+                    return 2
+                else:
+                    return 0
+            else:
+                if row["yrscontribution"] + 57.67 - row["age"] >= 29:
+                    return 57.67 - 57
+                elif row["age"] + 29 - row["yrscontribution"] < 65:
+                    return 2
+                elif row["yrscontribution"] + 65 - row["age"] < 19:
+                    return 2
+                else:
+                    return 0
+        # Wave 6
+        elif row["wave"] == 6:
+            if row["nb_children"] == 0:
+                if row["yrscontribution"] + 62 - row["age"] >= 31:
+                    return 0.33
+                elif row["age"] + 31 - row["yrscontribution"] < 62.83 + 5:
+                    return 2
+                elif row["yrscontribution"] + 62.83 + 5 - row["age"] >= 20:
+                    return 62.83 + 5 - 65
+                else:
+                    return 1
+            elif row["nb_children"] == 1:
+                if row["yrscontribution"] + 61 - row["age"] >= 31:
+                    return 0.33
+                elif row["age"] + 31 - row["yrscontribution"] < 62.83 + 5:
+                    return 2
+                elif row["yrscontribution"] + 62.83 + 5 - row["age"] >= 20:
+                    return 62.83 + 5 - 65
+                else:
+                    return 1
+            elif row["nb_children"] == 2:
+                if row["yrscontribution"] + 60 - row["age"] >= 31:
+                    return 0.33
+                elif row["age"] + 31 - row["yrscontribution"] < 62.83 + 5:
+                    return 2
+                elif row["yrscontribution"] + 62.83 + 5 - row["age"] >= 20:
+                    return 62.83 + 5 - 65
+                else:
+                    return 1
+            elif row["nb_children"] == 3 or row["nb_children"] == 4:
+                if row["yrscontribution"] + 59 - row["age"] >= 31:
+                    return 0.33
+                elif row["age"] + 31 - row["yrscontribution"] < 62.83 + 5:
+                    return 2
+                elif row["yrscontribution"] + 62.83 + 5 - row["age"] >= 20:
+                    return 62.83 + 5 - 65
+                else:
+                    return 1
+            else:
+                if row["yrscontribution"] + 58 - row["age"] >= 31:
+                    return 0.33
+                elif row["age"] + 31 - row["yrscontribution"] < 62.83 + 5:
+                    return 2
+                elif row["yrscontribution"] + 62.83 + 5 - row["age"] >= 20:
+                    return 62.83 + 5 - 65
+                else:
+                    return 1
+        # Wave 7
+        elif row["wave"] == 7:
+            if row["nb_children"] == 0:
+                if row["yrscontribution"] + 62.67 - row["age"] >= 33:
+                    return 0.67
+                elif row["age"] + 33 - row["yrscontribution"] < 63.17 + 5:
+                    return 2
+                elif row["yrscontribution"] + 63.17 + 5 - row["age"] >= 20:
+                    return 63.17 + 5 - (62.83 + 5)
+                else:
+                    return 0
+            elif row["nb_children"] == 1:
+                if row["yrscontribution"] + 61.67 - row["age"] >= 33:
+                    return 0.67
+                elif row["age"] + 33 - row["yrscontribution"] < 63.17 + 5:
+                    return 2
+                elif row["yrscontribution"] + 63.17 + 5 - row["age"] >= 20:
+                    return 63.17 + 5 - (62.83 + 5)
+                else:
+                    return 0
+            elif row["nb_children"] == 2:
+                if row["yrscontribution"] + 60.67 - row["age"] >= 33:
+                    return 0.67
+                elif row["age"] + 33 - row["yrscontribution"] < 63.17 + 5:
+                    return 2
+                elif row["yrscontribution"] + 63.17 + 5 - row["age"] >= 20:
+                    return 63.17 + 5 - (62.83 + 5)
+                else:
+                    return 0
+            elif row["nb_children"] == 3 or row["nb_children"] == 4:
+                if row["yrscontribution"] + 59.67 - row["age"] >= 33:
+                    return 0.67
+                elif row["age"] + 33 - row["yrscontribution"] < 63.17 + 5:
+                    return 2
+                elif row["yrscontribution"] + 63.17 + 5 - row["age"] >= 20:
+                    return 63.17 + 5 - (62.83 + 5)
+                else:
+                    return 0
+            else:
+                if row["yrscontribution"] + 58.67 - row["age"] >= 33:
+                    return 0.67
+                elif row["age"] + 33 - row["yrscontribution"] < 63.17 + 5:
+                    return 2
+                elif row["yrscontribution"] + 63.17 + 5 - row["age"] >= 20:
+                    return 63.17 + 5 - (62.83 + 5)
+                else:
+                    return 0
+        # Wave 8
+        elif row["wave"] == 8:
+            if row["nb_children"] == 0:
+                if row["yrscontribution"] + 63.67 - row["age"] >= 35:
+                    return 1
+                elif row["age"] + 35 - row["yrscontribution"] < 63.67 + 5:
+                    return 2
+                elif row["yrscontribution"] + 63.67 + 5 - row["age"] >= 20:
+                    return 63.67 + 5 - (63.17 + 5)
+                else:
+                    return 0
+            elif row["nb_children"] == 1:
+                if row["yrscontribution"] + 62.67 - row["age"] >= 35:
+                    return 1
+                elif row["age"] + 35 - row["yrscontribution"] < 63.67 + 5:
+                    return 2
+                elif row["yrscontribution"] + 63.67 + 5 - row["age"] >= 20:
+                    return 63.67 + 5 - (63.17 + 5)
+                else:
+                    return 0
+            elif row["nb_children"] == 2:
+                if row["yrscontribution"] + 61.67 - row["age"] >= 35:
+                    return 1
+                elif row["age"] + 35 - row["yrscontribution"] < 63.67 + 5:
+                    return 2
+                elif row["yrscontribution"] + 63.67 + 5 - row["age"] >= 20:
+                    return 63.67 + 5 - (63.17 + 5)
+                else:
+                    return 0
+            elif row["nb_children"] == 3 or row["nb_children"] == 4:
+                if row["yrscontribution"] + 60.67 - row["age"] >= 35:
+                    return 1
+                elif row["age"] + 35 - row["yrscontribution"] < 63.67 + 5:
+                    return 2
+                elif row["yrscontribution"] + 63.67 + 5 - row["age"] >= 20:
+                    return 63.67 + 5 - (63.17 + 5)
+                else:
+                    return 0
+            else:
+                if row["yrscontribution"] + 59.67 - row["age"] >= 35:
+                    return 1
+                elif row["age"] + 35 - row["yrscontribution"] < 63.67 + 5:
+                    return 2
+                elif row["yrscontribution"] + 63.67 + 5 - row["age"] >= 20:
+                    return 63.67 + 5 - (63.17 + 5)
+                else:
+                    return 0
+        else:
+            return 0

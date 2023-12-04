@@ -18,7 +18,12 @@ def belgium_age(row):
 
 def belgium_change(row):
     # Female
-    if row["wave"] == 2 or row["wave"] == 4:
-        return 1
-    else:
-        return 0
+    if row["gender"] == "Female":
+        if row["wave"] == 2 or row["wave"] == 4:
+            return 1
+        else:
+            return 0
+
+
+def belgium_change1(row):
+    return 0

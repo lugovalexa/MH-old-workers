@@ -52,3 +52,27 @@ def poland_change(row):
                 return 0
         else:
             return 0
+
+
+def poland_change1(row):
+    # Male
+    if row["gender"] == "Male":
+        # Wave 6
+        if row["wave"] == 6:
+            if row["yrscontribution"] + 65.75 - row["age"] >= 25:
+                return 0.75
+            else:
+                return 0
+        else:
+            return 0
+
+    # Female
+    else:
+        # Wave 6
+        if row["wave"] == 6:
+            if row["yrscontribution"] + 60.75 - row["age"] >= 20:
+                return 0.75
+            else:
+                return 0
+        else:
+            return 0

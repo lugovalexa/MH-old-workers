@@ -16,3 +16,7 @@ def austria_age(row):
 
 def austria_change(row):
     return 0
+
+
+def austria_change1(row):
+    return 0

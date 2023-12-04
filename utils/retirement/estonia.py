@@ -123,3 +123,50 @@ def estonia_change(row):
                 return 0
         else:
             return 0
+
+
+def estonia_change1(row):
+    # Male
+    if row["gender"] == "Male":
+        # Waves 1-6
+        if row["wave"] == 7:
+            if row["yrscontribution"] + 63.25 - row["age"] >= 15:
+                return 0.25
+            else:
+                return 0
+        # Wave 8
+        elif row["wave"] == 8:
+            if row["yrscontribution"] + 63.75 - row["age"] >= 15:
+                return 0.5
+            else:
+                return 0
+        else:
+            return 0
+    # Female
+    else:
+        # Wave 5
+        if row["wave"] == 5:
+            if row["yrscontribution"] + 62 - row["age"] >= 15:
+                return 1
+            else:
+                return 0
+        # Wave 6
+        elif row["wave"] == 6:
+            if row["yrscontribution"] + 62.5 - row["age"] >= 15:
+                return 0.5
+            else:
+                return 0
+        # Wave 7
+        elif row["wave"] == 7:
+            if row["yrscontribution"] + 63.25 - row["age"] >= 15:
+                return 0.75
+            else:
+                return 0
+        # Wave 8
+        elif row["wave"] == 8:
+            if row["yrscontribution"] + 63.75 - row["age"] >= 15:
+                return 0.5
+            else:
+                return 0
+        else:
+            return 0
