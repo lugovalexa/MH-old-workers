@@ -23,6 +23,8 @@ def belgium_change(row):
             return 1
         else:
             return 0
+    else:
+        return 0
 
 
 def belgium_change1(row):
