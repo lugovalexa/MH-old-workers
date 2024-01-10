@@ -14,5 +14,6 @@ def import_libraries():
     import pyreadstat
     from factor_analyzer import FactorAnalyzer
     from pandas.io.stata import StataReader
+    from scipy.linalg import eigh
 
     warnings.filterwarnings("ignore")

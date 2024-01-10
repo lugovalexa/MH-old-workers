@@ -16,8 +16,11 @@ def merge_share_ewcs(
     )
 
     # Read input CSVs
-    df = pd.read_csv("data_clean_w456.csv")
-    indexes = pd.read_csv("work_quality_indexes_year_country.csv")
+    df = pd.read_csv("share_clean_w456.csv")
+    if convert_to_3_digits:
+        indexes = pd.read_csv("work_quality_indexes_year_country_3digits.csv")
+    else:
+        indexes = pd.read_csv("work_quality_indexes_year_country_4digits.csv")
 
     # Optional: aggregate indexes if year only-wise merge
     if not_country_wise:
