@@ -3,6 +3,50 @@ import pandas as pd
 
 
 def describe_data(df):
+    """
+    Summarizes and visualizes various aspects of the input DataFrame.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame containing the data to be described.
+
+    This function performs the following tasks:
+
+    1. **ID Analysis:**
+        - Number of unique IDs.
+        - Number of unique IDs by country.
+        - Number of unique IDs by year.
+
+    2. **Demographics:**
+        - Displays descriptive statistics for age, gender, number of children, and years of education.
+
+    3. **Demographics Plotting:**
+        - Histograms for age, gender, number of children, and years of education.
+
+    4. **Job Status and Industry:**
+        - Displays the distribution of job statuses.
+        - Displays the distribution of industries of employment.
+
+    5. **Income, Investment, and Insurance:**
+        - Displays descriptive statistics for total income, investment, and life insurance.
+
+    6. **Employment Details:**
+        - Displays descriptive statistics for years of contribution, retirement age, work horizon, and work horizon change.
+
+    7. **Employment Details Plotting:**
+        - Histograms for years of contribution, retirement age, work horizon, and work horizon change.
+
+    8. **Physical Health and Chronic Diseases:**
+        - Displays the distribution of physical health status and chronic diseases.
+
+    9. **Mental Health:**
+        - Displays the distribution of EuroD category.
+        - Displays EuroD scale score histogram.
+
+    10. **Working Conditions:**
+        - Displays descriptive statistics for various working conditions.
+
+    """
+
     # Number of unique IDs
     print("Number of unique IDs:", df["mergeid"].nunique())
     print("Number of unique IDs by country:")

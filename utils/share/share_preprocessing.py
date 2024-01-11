@@ -5,6 +5,15 @@ from scipy.linalg import eigh
 
 
 def calculate_age(row):
+    """
+    Calculate the current age based on available information in the input row.
+
+    Parameters:
+    - row (pd.Series): A Pandas Series representing a row of a DataFrame containing relevant information.
+
+    Returns:
+    - float or np.nan: The calculated current age, or np.nan if there is insufficient information.
+    """
     if not pd.isnull(row["age2011"]):
         return row["age2011"] + (row["year"] - 2011)
     elif not pd.isnull(row["age2013"]):
@@ -16,10 +25,20 @@ def calculate_age(row):
 
 
 def number_of_children(df):
+    """
+    Calculate the number of children and grandchildren for each individual in the DataFrame for the years 2011, 2013, and 2015.
+
+    Parameters:
+    - df (pd.DataFrame): The input DataFrame containing information about individuals and their children/grandchildren.
+
+    Returns:
+    - pd.DataFrame: The DataFrame with added columns for the number of children and grandchildren for each individual.
+    """
     # Calculate number of children
+    # Handle missing values
     df = df[(df.ch001_ != "Refusal")].reset_index(drop=True)
     df["ch001_"] = df["ch001_"].replace({"Don't know": 0})
-
+    # Calculate number of children by household for each year
     children2011 = (
         df[df.wave == 4]
         .groupby("hhid4")["ch001_"]
@@ -45,17 +64,19 @@ def number_of_children(df):
         .fillna(0)
     )
 
+    # Merge with main dataframe
     df = df.merge(children2011, on="hhid4", how="left")
     df = df.merge(children2013, on="hhid5", how="left")
     df = df.merge(children2015, on="hhid6", how="left")
 
+    # Find current number for each line
     df["nb_children"] = (
         df["nb_children2011"]
         .combine_first(df["nb_children2013"])
         .combine_first(df["nb_children2015"])
     )
 
-    # Calculate number of grandchildren
+    # Calculate number of grandchildren - the same process
     df = df[(df.ch021_ != "Refusal")].reset_index(drop=True)
     df["ch021_"] = df["ch021_"].replace({"Don't know": 0})
 
@@ -98,16 +119,30 @@ def number_of_children(df):
 
 
 def industry(df):
+    """
+    Identify the industry in which each individual works based on SHARE job episodes panel data.
+
+    Parameters:
+    - df (pd.DataFrame): The input DataFrame containing information about individuals.
+
+    Returns:
+    - pd.DataFrame: The DataFrame with an added 'industry' column representing the identified industry for each individual.
+    ```
+    """
+    # Load job episodes panel
     jobs = pd.read_stata(
         "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/sharewX_rel8-0-0_gv_job_episodes_panel.dta"
     )
+    # Choose only employed individuals
     conditions = ["Employee or self-employed", "Short term job (less than 6 months)"]
     ep_data = jobs[jobs["situation"].isin(conditions)].sort_values(["mergeid", "year"])
+    # Find the latest industry of employment
     last_industry = (
         ep_data.groupby("mergeid")["industry"]
         .apply(lambda x: x.dropna().iloc[-1] if not x.dropna().empty else np.nan)
         .reset_index()
     )
+    # Merge with main df and drop missing values
     df = df.merge(last_industry, on="mergeid", how="left")
     df["industry"] = df["industry"].replace(["Don't know", "Refusal"], np.nan)
     df = df.dropna(subset="industry").reset_index(drop=True)
@@ -116,6 +151,22 @@ def industry(df):
 
 
 def finance(df):
+    """
+    Add financial information to the DataFrame, including household income, investments, and life insurance.
+
+    Parameters:
+    - df (pd.DataFrame): The input DataFrame containing information about individuals.
+
+    Returns:
+    - pd.DataFrame: The DataFrame with added columns representing financial information.
+
+    Note:
+    - The function reads household income data for waves 4, 5, and 6 from specific file paths.
+    - It merges the household income information based on 'mergeid' and 'wave'.
+    - Investments and life insurance columns are converted to binary (Yes: 1, No/Refusal/Don't know: 0).
+    - All types of investments are aggregated into a single column to indicate 1 - has investments and 0 - no investments.
+    - The resulting DataFrame includes additional columns: 'thinc' (household income), 'thinc2' (household income alternative), 'investment' (1 if present), and 'life_insurance' (1 if present).
+    """
     # Add household income
     ws = [4, 5, 6]
     dfs = []
@@ -201,6 +252,17 @@ def finance(df):
 
 
 def health(df):
+    """
+    Add health-related information to the DataFrame, including overall physical health indexes,
+    number of chronic diseases, and Euro-D scale scores for mental health.
+    Additionaly, a PCA is done on Euro-D data to obtain separate factors for motivation lack and affective suffering.
+
+    Parameters:
+    - df (pd.DataFrame): The input DataFrame containing information about individuals.
+
+    Returns:
+    - pd.DataFrame: The DataFrame with added columns representing health-related information.
+    """
     # Add overall physical health indexes
     df["sphus"] = df["sphus"].replace(
         {"Poor": 1, "Fair": 2, "Good": 3, "Very good": 4, "Excellent": 5}
@@ -302,6 +364,29 @@ def health(df):
 
 
 def share_preprocessing(df, data_with_isco):
+    """
+    Perform preprocessing on SHARE survey data, integrating information from multiple sources.
+
+    Parameters:
+    - df (pd.DataFrame): The main SHARE survey DataFrame containing individual information.
+    - data_with_isco (pd.DataFrame): DataFrame containing ISCO codes for individuals.
+
+    Returns:
+    - pd.DataFrame: The preprocessed DataFrame with integrated information.
+
+    Note:
+    - The function first filters out individuals without ISCO codes.
+    - It adds the 'year' column based on the 'wave'.
+    - Current age is calculated using the 'calculate_age' function.
+    - Number of children and grandchildren is calculated using the 'number_of_children' function.
+    - Employment status is filtered to include only employed individuals.
+    - Individuals eligible for disability or special state pensions are excluded.
+    - 'job_status' and 'industry' information is added using the 'industry' function.
+    - Financial information including household income, investments, and life insurance is added using the 'finance' function.
+    - Physical and mental health indicators are added using the 'health' function.
+    - The final DataFrame is selected with relevant columns.
+
+    """
     # Leave only also those with isco codes
     unique_mergeid_share = set(df["mergeid"].unique())
     unique_mergeid_isco = set(data_with_isco["mergeid"].unique())

@@ -6,6 +6,15 @@ from ..retirement import *
 
 
 def calculate_contribution(row):
+    """
+    Calculate the years of contribution to social security for the current year.
+
+    Parameters:
+    - row (pd.Series): A Pandas Series representing a row of a DataFrame containing relevant information.
+
+    Returns:
+    - int: The calculated years of contribution to social security for the current year.
+    """
     if row["year"] == 2011:
         return row["yrscontribution2017"] - 6
     elif row["year"] == 2013:
@@ -15,6 +24,19 @@ def calculate_contribution(row):
 
 
 def calculate_retirement_age(row):
+    """
+    Calculate the retirement age based on country- and year-specific retirement rules.
+
+    Parameters:
+    - row (pd.Series): A Pandas Series representing a row of a DataFrame containing relevant information.
+
+    Returns:
+    - int or None: The calculated retirement age for the given country, or None if the country is not found.
+
+    Note:
+    - This function relies on specific functions for each country to calculate retirement age.
+    - The functions for each country should are defined separately (e.g., austria_age, belgium_age) and are located in utils/retirement folder.
+    """
     country = row["country"]
     country_functions_age = {
         "Austria": austria_age,
@@ -36,6 +58,20 @@ def calculate_retirement_age(row):
 
 
 def calculate_horizon_change(row):
+    """
+    Calculate the retirement age change based on country- and year-specific retirement reforms.
+    Takes into account the maximum possible criteria of eligibility to change, including age, gender, number of children, industry of employment, etc.
+
+    Parameters:
+    - row (pd.Series): A Pandas Series representing a row of a DataFrame containing relevant information.
+
+    Returns:
+    - int or None: The calculated retirement age change for the given country, or None if the country is not found.
+
+    Note:
+    - This function relies on specific functions for each country to calculate retirement age.
+    - The functions for each country should are defined separately (e.g., austria_change, belgium_change) and are located in utils/retirement folder.
+    """
     country = row["country"]
     country_functions_change = {
         "Austria": austria_change1,
@@ -57,6 +93,22 @@ def calculate_horizon_change(row):
 
 
 def add_weights(df, weights_folder_path):
+    """
+    Add longitudinal weights to a DataFrame based on STATA-calculated weights following SHARE templates.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame to which weights will be added.
+    - weights_folder_path (str): The path to the folder containing STATA-calculated weight files.
+
+    Returns:
+    - pd.DataFrame: The DataFrame with longitudinal weights added.
+
+    Note:
+    - The function assumes that weight files in the specified folder follow SHARE templates.
+    - Weight files are expected to be in Stata format (.dta) and contain columns "mergeid", "dw_w4", and "my_wgt".
+    - The resulting DataFrame will be merged with the input DataFrame based on the "mergeid" column.
+    - Rows with missing weights ("my_wgt") will be dropped from the resulting DataFrame.
+    """
     file_list = os.listdir(weights_folder_path)
     datasets = []
     for file in file_list:
@@ -73,6 +125,17 @@ def add_weights(df, weights_folder_path):
 
 
 def share_final_preprocessing(df):
+    """
+    Perform SHARE dataset final preprocessing steps, including age column removal, years of contribution recalculation,
+    data type corrections, setting legal retirement age, filtering individuals above retirement age,
+    calculating work horizon, change of retirement age induced by reform, and adding longitudinal weights.
+
+    Parameters:
+    - df (pd.DataFrame): The input DataFrame representing SHARE survey data.
+
+    Returns:
+    - pd.DataFrame: The preprocessed DataFrame with added features and applied modifications.
+    """
     # Drop extra age columns
     df = df.drop(columns=["age2015", "age2017", "age2020"])
 

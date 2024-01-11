@@ -2,6 +2,20 @@ import pandas as pd
 
 
 def social_environment_index(df, df2010):
+    """
+    Calculate and create the Social Environment Index on EWCS data to reproduce the original one (as it is only given for 2015).
+    The number of metrics included in the index is limited to those present both in 2015 and 2010.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame containing survey responses for the year 2015.
+    - df2010 (pd.DataFrame): The DataFrame containing survey responses for the year 2010.
+
+    Returns:
+    pd.DataFrame: A DataFrame with columns 'id', 'jqi_social_environment', and 'year' representing
+                  individual IDs, calculated Social Environment Index, and the respective survey year.
+    """
+    # Calculate index for 2010
+    # Choose columns
     soc10 = df2010[
         [
             "id",
@@ -17,16 +31,19 @@ def social_environment_index(df, df2010):
             "q51b",
         ]
     ]
-    soc10 = soc10.dropna().reset_index(drop=True)
 
+    # Drop missing values
+    soc10 = soc10.dropna().reset_index(drop=True)
     for col in soc10.columns:
         if col != "id":
             soc10[col] = soc10[col].astype("int")
             soc10 = soc10[soc10[col] < 7].reset_index(drop=True)
 
+    # Transform some questions
     soc10[["q58a", "q58b"]] = soc10[["q58a", "q58b"]].replace({1: 2, 2: 1})
     soc10[["q51a", "q51b"]] = soc10[["q51a", "q51b"]].replace({1: 5, 2: 4, 4: 2, 5: 1})
 
+    # Calculate index
     soc10["jqi_social_environment"] = (
         soc10["q58a"]
         + soc10["q58b"]
@@ -40,6 +57,7 @@ def social_environment_index(df, df2010):
         + soc10["q71c"]
     )
 
+    # Re-scale to 0-100
     old_min = 10
     old_max = 26
     new_min = 0
@@ -52,8 +70,7 @@ def social_environment_index(df, df2010):
     soc10 = soc10[["id", "jqi_social_environment"]]
     soc10["year"] = 2010
 
-    # Similarly, process for 2015
-
+    # The same for 2015
     soc15 = df[
         [
             "id",
@@ -118,16 +135,35 @@ def social_environment_index(df, df2010):
 
 
 def prospects_index(df, df2010):
+    """
+    Calculate and create the Prospects Index on EWCS data to reproduce the original one (as it is not represented in its fullest version).
+    The number of metrics included in the index is limited to those present both in 2015 and 2010.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame containing survey responses for the year 2015.
+    - df2010 (pd.DataFrame): The DataFrame containing survey responses for the year 2010.
+
+    Returns:
+    pd.DataFrame: A DataFrame with columns 'id', 'jqi_prospects', and 'year' representing
+                  individual IDs, calculated Prospects Index, and the respective survey year.
+    """
+    # Calculate index for 2010
+    # Choose columns
     pro10 = df2010[["id", "q77c", "q77a"]]
+
+    # Drop missing values
     pro10 = pro10.dropna().reset_index(drop=True)
     for col in pro10.columns:
         if col != "id":
             pro10[col] = pro10[col].astype("int")
             pro10 = pro10[pro10[col] < 7].reset_index(drop=True)
-
+    # Transform some questions
     pro10["q77a"] = pro10["q77a"].replace({1: 5, 2: 4, 4: 2, 5: 1})
+
+    # Calculate index
     pro10["jqi_prospects"] = pro10["q77c"] + pro10["q77a"]
 
+    # Re-scale to 0-100
     old_min = 2
     old_max = 10
     new_min = 0
@@ -140,6 +176,7 @@ def prospects_index(df, df2010):
     pro10 = pro10[["id", "jqi_prospects"]]
     pro10["year"] = 2010
 
+    # The same for 2015
     pro15 = df[["id", "y15_Q89b", "y15_Q89g"]]
     pro15 = pro15.dropna().reset_index(drop=True)
     for col in pro15.columns:
@@ -162,8 +199,10 @@ def prospects_index(df, df2010):
     pro15 = pro15[["id", "jqi_prospects"]]
     pro15["year"] = 2015
 
+    # Merge two datasets
     pro = pd.concat([pro10, pro15], axis=0).reset_index(drop=True)
 
+    # Format id column
     pro["id"] = pro["id"].astype(str)
     pro["id"] = pro["id"].astype(str).apply(lambda x: x[:-2] if x.endswith(".0") else x)
     pro["id"] = pro["id"].str.replace(r"[^ -~]+", "", regex=True)
@@ -175,6 +214,20 @@ def prospects_index(df, df2010):
 
 
 def intensity_index(df, df2010):
+    """
+    Calculate and create the Intensity Index on EWCS data to reproduce the original one (as it is only given for 2015).
+    The number of metrics included in the index is limited to those present both in 2015 and 2010.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame containing survey responses for the year 2015.
+    - df2010 (pd.DataFrame): The DataFrame containing survey responses for the year 2010.
+
+    Returns:
+    pd.DataFrame: A DataFrame with columns 'id', 'jqi_intensity', and 'year' representing
+                  individual IDs, calculated Intensity Index, and the respective survey year.
+    """
+    # Calculate index for 2010
+    # Choose columns
     int10 = df2010[
         [
             "id",
@@ -192,6 +245,8 @@ def intensity_index(df, df2010):
             "q48",
         ]
     ]
+
+    # Drop missing values
     int10 = int10.dropna().reset_index(drop=True)
     for col in int10.columns:
         if col != "id" and col != "q46e":
@@ -201,6 +256,7 @@ def intensity_index(df, df2010):
             int10[col] = int10[col].astype("int")
             int10 = int10[int10[col] < 7].reset_index(drop=True)
 
+    # Transform some questions
     int10["q4748"] = int10["q47"] * int10["q48"]
 
     int10["q46"] = 2
@@ -214,6 +270,7 @@ def intensity_index(df, df2010):
 
     int10["q51g"] = int10["q51g"].replace({1: 5, 2: 4, 4: 2, 5: 1})
 
+    # Calculate index
     int10["jqi_intensity"] = (
         int10["q45a"]
         + int10["q45b"]
@@ -229,6 +286,7 @@ def intensity_index(df, df2010):
         + int10["q4748"]
     )
 
+    # Re-scale to 0-100
     old_min = 11
     old_max = 54
     new_min = 0
@@ -241,6 +299,7 @@ def intensity_index(df, df2010):
     int10 = int10[["id", "jqi_intensity"]]
     int10["year"] = 2010
 
+    # The same for 2015
     int15 = df[
         [
             "id",
@@ -304,8 +363,10 @@ def intensity_index(df, df2010):
     int15 = int15[["id", "jqi_intensity"]]
     int15["year"] = 2015
 
+    # Merge two datasets
     int = pd.concat([int10, int15], axis=0).reset_index(drop=True)
 
+    # Format id column
     int["id"] = int["id"].astype(str)
     int["id"] = int["id"].astype(str).apply(lambda x: x[:-2] if x.endswith(".0") else x)
     int["id"] = int["id"].str.replace(r"[^ -~]+", "", regex=True)
@@ -317,6 +378,17 @@ def intensity_index(df, df2010):
 
 
 def sum_wq_index(df):
+    """
+    Calculate and create a Overall Work Quality Index as a sum of all EWCS indexes except monthly earnings.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame containing different EWCS indexes.
+
+    Returns:
+    pd.DataFrame: A DataFrame with added columns 'jqi_sum' and 'jqi_sum_weighted' representing
+                  the overall work quality index and the weighted overall work quality index, respectively.
+    """
+    # Calculate the overall work quality index
     df["jqi_sum"] = (
         +df["jqi_skills_discretion"]
         + df["jqi_social_environment"]
@@ -325,6 +397,8 @@ def sum_wq_index(df):
         + df["jqi_prospects"]
         + df["jqi_working_time_quality"]
     )
+
+    # Calculate the weighted version
     df["jqi_sum_weighted"] = (
         +df["jqi_skills_discretion_weighted"]
         + df["jqi_social_environment_weighted"]
@@ -341,8 +415,24 @@ def sum_wq_index(df):
 
 
 def interpolate2013(df):
+    """
+    Interpolate missing values for the year 2013 based on available data from 2010 and 2015.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame containing survey responses for multiple years, including 2010 and 2015.
+
+    Returns:
+    pd.DataFrame: A DataFrame with interpolated values for the year 2013.
+
+    The function takes a DataFrame with survey responses for multiple years and interpolates missing values
+    for the year 2013 based on available data from 2010 and 2015. Linear interpolation is used with a limit
+    of one consecutive missing value. The interpolated values are calculated as a weighted average of the
+    corresponding values from 2010 and 2015.
+    """
+    # Set format to year column
     df["year"] = pd.to_datetime(df["year"], format="%Y")
 
+    # Create separate datasets for 2010 and 2015 and then country-isco wise versions
     df_2010 = df[df["year"].dt.year == 2010]
     df_2015 = df[df["year"].dt.year == 2015]
 
@@ -357,6 +447,7 @@ def interpolate2013(df):
                 (df_2015["country"] == country) & (df_2015["isco"] == isco)
             ]
 
+            # Interpolate values for 2013 for each country-isco combination
             if not data_2010.empty and not data_2015.empty:
                 interpolated_values_2013 = data_2010.iloc[0, 3:].interpolate(
                     method="linear", limit_area="inside", limit=1
@@ -374,6 +465,7 @@ def interpolate2013(df):
 
                 df_2013 = pd.concat([df_2013, row_2013], ignore_index=True)
 
+    # Merge main dataframe with interpolated values
     df = pd.concat([df, df_2013], ignore_index=True)
     df["year"] = pd.to_datetime(df["year"], format="%Y")
     df["year"] = df["year"].dt.year

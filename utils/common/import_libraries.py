@@ -1,4 +1,13 @@
 def import_libraries():
+    """
+    Import necessary libraries for data analysis.
+
+    This function performs the following tasks:
+
+    1. Imports essential Python libraries for data analysis and visualization.
+    2. Adds the project source path to the system path.
+    3. Sets up warning filtering to ignore warnings during execution.
+    """
     import os
     import sys
 

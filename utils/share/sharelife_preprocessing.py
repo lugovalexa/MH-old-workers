@@ -3,6 +3,15 @@ from pandas.io.stata import StataReader
 
 
 def get_last_valid(row):
+    """
+    Retrieve the last valid value from a Pandas Series along each row.
+
+    Parameters:
+    - row (pd.Series): A Pandas Series representing a row of data.
+
+    Returns:
+    - pd.Series or pd.NA: The last valid value in the row, or pd.NA if no valid value is found.
+    """
     last_valid_index = row.last_valid_index()
     if pd.notnull(last_valid_index):
         return row[last_valid_index]
@@ -11,6 +20,22 @@ def get_last_valid(row):
 
 
 def sharelife_gender_country_age(df):
+    """
+    Perform data preprocessing for Sharelife data, focusing on gender, country, and age-related information.
+
+    Parameters:
+    - df (pd.DataFrame): The Sharelife DataFrame containing individual information.
+
+    Returns:
+    - pd.DataFrame: The preprocessed DataFrame with formatted gender, country, and age-related data.
+
+    Note:
+    - The function reads country labels from the SHARE dataset and replaces country numbers with country names.
+    - It fills gaps in the 'yr1country' column with birth year when not available and renames the column accordingly.
+    - Gender is transformed to 1 for female and 0 for male.
+    - The DataFrame is filtered to include individuals aged 50 and above as of the year 2011.
+    - Gaps in the 'mobirth' column are filled with 1.
+    """
     # Replace country numbers with names
     with StataReader(
         "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/sharew7_rel8-0-0_ALL_datasets_stata/sharew7_rel8-0-0_cv_r.dta",
@@ -40,6 +65,21 @@ def sharelife_gender_country_age(df):
 
 
 def sharelife_add_gender_country_age(df):
+    """
+    Perform data preprocessing for additional data coming from main SHARE datasets, focusing on gender, country, and age-related information.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame coming from SHARE main datasets containing individual information.
+
+    Returns:
+    - pd.DataFrame: The preprocessed DataFrame with formatted gender, country, and age-related data.
+
+    Note:
+    - It fills gaps in the 'yr1country' column with birth year when not available and renames the column accordingly.
+    - Gender is transformed to 1 for female and 0 for male.
+    - The DataFrame is filtered to include individuals aged 50 and above as of the year 2011.
+    -  'mobirth' column is tranformed to numeric, gaps are filled with 1.
+    """
     # 1st year in country
     df["dn006_"] = df["dn006_"].fillna(df["yrbirth"])
     df = df.rename(columns={"dn006_": "yr1country"})
@@ -82,6 +122,22 @@ def sharelife_add_gender_country_age(df):
 
 
 def calculate_education_years(waves):
+    """
+    Calculate the total years of education based on SHARE survey data.
+
+    Parameters:
+    - waves (list): List of wave numbers for which education data is available.
+
+    Returns:
+    - pd.DataFrame: DataFrame containing the total years of education for each individual.
+
+    Note:
+    - The function reads education data from SHARE wave datasets part "dn".
+    - It calculates the total years of education ('yrseducation') for each individual.
+    - The resulting DataFrame is filtered to include values of years of education between 0 and 40 years.
+    - The function returns a DataFrame with 'mergeid' and 'yrseducation' columns.
+
+    """
     dfs = []
     for wave in waves:
         file_path = f"/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/sharew{wave}_rel8-0-0_ALL_datasets_stata/sharew{wave}_rel8-0-0_dn.dta"
@@ -102,6 +158,23 @@ def calculate_education_years(waves):
 
 
 def sharelife_job(df):
+    """
+    Perform data preprocessing for job-related information in Sharelife data.
+
+    Parameters:
+    - df (pd.DataFrame): The Sharelife DataFrame containing individual information.
+
+    Returns:
+    - pd.DataFrame: The preprocessed DataFrame with identified current job ISCO codes.
+
+    Note:
+    - The function identifies the current job ISCO code for each individual based on available columns.
+    - Individuals with missing or non-positive ISCO codes are dropped from the DataFrame.
+    - Some ISCO codes are corrected by appending a missing '0' at the end for specific cases.
+    - Individuals who changed jobs between 2011 and 2017 are excluded from the DataFrame.
+    - The resulting DataFrame includes columns such as 'mergeid', 'isco', and 'job_start'.
+
+    """
     # Identify current job isco
     isco_columns = [f"re012isco_{i}" for i in range(1, 21)]
     df["isco"] = df[isco_columns].apply(get_last_valid, axis=1)
@@ -125,6 +198,23 @@ def sharelife_job(df):
 
 
 def sharelife_add_job(df):
+    """
+    Perform data preprocessing for job-related information in additional data from main SHARE datasets.
+
+    Parameters:
+    - df (pd.DataFrame): The SHARE DataFrame containing individual information.
+
+    Returns:
+    - pd.DataFrame: The preprocessed DataFrame with identified current job ISCO codes.
+
+    Note:
+    - The function identifies the current job ISCO code for each individual based on available columns.
+    - Individuals with missing or non-positive ISCO codes are dropped from the DataFrame.
+    - Some ISCO codes are corrected by appending a missing '0' at the end for specific cases.
+    - Individuals who changed jobs between 2011 and 2017 are excluded from the DataFrame.
+    - The resulting DataFrame includes columns such as 'mergeid', 'isco', and 'job_start'.
+
+    """
     # Identify current job isco
     df = df.rename(columns={"ep616isco": "isco"})
     df["isco"] = df["isco"].astype(int)
@@ -154,6 +244,22 @@ def sharelife_add_job(df):
 
 
 def contribution_years(df):
+    """
+    Calculate years of contribution to social security from SHARE job episodes panel and filter individuals based on it.
+
+    Parameters:
+    - df (pd.DataFrame): The main DataFrame containing individual information.
+
+    Returns:
+    - pd.DataFrame: The filtered DataFrame with calculated years of contribution.
+
+    Note:
+    - The function loads job episodes panel data and identifies relevant job situations.
+    - It calculates the number of years of work ('yrscontribution2017') for each individual by considering relevant job situations.
+    - The year of first contribution ('yr1contribution') is also calculated.
+    - The resulting DataFrame is merged with the main dataset.
+    - Individuals with less than 10 years of contributions in 2015 and those who started work before the age of 10 are filtered out.
+    """
     # Load job episodes panel data (from retrospective waves 3 and 7)
     jobs = pd.read_stata(
         "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/sharewX_rel8-0-0_gv_job_episodes_panel.dta"
@@ -205,6 +311,24 @@ def contribution_years(df):
 
 
 def sharelife_preprocessing(df):
+    """
+    Perform preprocessing for Sharelife data, including gender, country, age, education, job changes,
+    and calculation of contribution years.
+
+    Parameters:
+    - df (pd.DataFrame): The main DataFrame containing Sharelife data.
+
+    Returns:
+    - pd.DataFrame: The preprocessed DataFrame with selected columns.
+
+    Note:
+    - The function filters Sharelife data based on 'mn103_' values.
+    - It preprocesses gender, country, and age using 'sharelife_gender_country_age' function.
+    - Education years are calculated and merged using 'calculate_education_years'.
+    - Job changes are preprocessed using 'sharelife_job'.
+    - Contribution years are calculated using 'contribution_years'.
+    - The resulting DataFrame contains selected columns.
+    """
     # Choose Sharelife part
     df = df[df.mn103_ == 1].reset_index(drop=True)
 
@@ -246,6 +370,25 @@ def sharelife_preprocessing(df):
 
 
 def sharelife_add_preprocessing(df, sharelife_data):
+    """
+    Perform preprocessing for additional data from main SHARE datasets, including gender, country, age, education, job changes,
+    and calculation of contribution years.
+
+    Parameters:
+    - df (pd.DataFrame): The main DataFrame containing SHARE data.
+    - sharelife_data (pd.DataFrame): The DataFrame containing main Sharelife data after preprocessing.
+
+    Returns:
+    - pd.DataFrame: The preprocessed DataFrame with selected columns.
+
+    Note:
+    - The function filters out individuals without isco code and those already present in main Sharelife dataset.
+    - It preprocesses gender, country, and age using 'sharelife_gender_country_age' function.
+    - Education years are calculated and merged using 'calculate_education_years'.
+    - Job changes are preprocessed using 'sharelife_job'.
+    - Contribution years are calculated using 'contribution_years'.
+    - The resulting DataFrame contains selected columns.
+    """
     # Leave only those with isco codes
     df = df.dropna(subset="ep616isco").reset_index(drop=True)
     df = df[
