@@ -12,3 +12,11 @@ from .poland import *
 from .slovenia import *
 from .spain import *
 from .switzerland import *
+
+"""
+The country-wise functions type "COUNTRY_age" calculate retirement age for individuals based on
+gender, year, number of children, age, and years of contribution and other country-year-specific rules.
+
+The country-wise functions type "COUNTRY_change" calculate retirement age change for individuals
+induced by country-year-specific retirement reforms.
+"""
