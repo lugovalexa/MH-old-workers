@@ -38,83 +38,32 @@ def number_of_children(df):
     # Handle missing values
     df = df[(df.ch001_ != "Refusal")].reset_index(drop=True)
     df["ch001_"] = df["ch001_"].replace({"Don't know": 0})
+
     # Calculate number of children by household for each year
-    children2011 = (
-        df[df.wave == 4]
-        .groupby("hhid4")["ch001_"]
+    children = (
+        df.groupby(["hhid", "year"])["ch001_"]
         .max()
-        .to_frame(name="nb_children2011")
-        .reset_index()
-        .fillna(0)
-    )
-    children2013 = (
-        df[df.wave == 5]
-        .groupby("hhid5")["ch001_"]
-        .max()
-        .to_frame(name="nb_children2013")
-        .reset_index()
-        .fillna(0)
-    )
-    children2015 = (
-        df[df.wave == 6]
-        .groupby("hhid6")["ch001_"]
-        .max()
-        .to_frame(name="nb_children2015")
+        .to_frame(name="nb_children")
         .reset_index()
         .fillna(0)
     )
 
     # Merge with main dataframe
-    df = df.merge(children2011, on="hhid4", how="left")
-    df = df.merge(children2013, on="hhid5", how="left")
-    df = df.merge(children2015, on="hhid6", how="left")
-
-    # Find current number for each line
-    df["nb_children"] = (
-        df["nb_children2011"]
-        .combine_first(df["nb_children2013"])
-        .combine_first(df["nb_children2015"])
-    )
+    df = df.merge(children, on=["hhid", "year"], how="left")
 
     # Calculate number of grandchildren - the same process
     df = df[(df.ch021_ != "Refusal")].reset_index(drop=True)
     df["ch021_"] = df["ch021_"].replace({"Don't know": 0})
 
-    children2011 = (
-        df[df.wave == 4]
-        .groupby("hhid4")["ch021_"]
+    grandchildren = (
+        df.groupby(["hhid", "year"])["ch021_"]
         .max()
-        .to_frame(name="nb_grandchildren2011")
-        .reset_index()
-        .fillna(0)
-    )
-    children2013 = (
-        df[df.wave == 5]
-        .groupby("hhid5")["ch001_"]
-        .max()
-        .to_frame(name="nb_grandchildren2013")
-        .reset_index()
-        .fillna(0)
-    )
-    children2015 = (
-        df[df.wave == 6]
-        .groupby("hhid6")["ch001_"]
-        .max()
-        .to_frame(name="nb_grandchildren2015")
+        .to_frame(name="nb_grandchildren")
         .reset_index()
         .fillna(0)
     )
 
-    df = df.merge(children2011, on="hhid4", how="left")
-    df = df.merge(children2013, on="hhid5", how="left")
-    df = df.merge(children2015, on="hhid6", how="left")
-
-    df["nb_grandchildren"] = (
-        df["nb_grandchildren2011"]
-        .combine_first(df["nb_grandchildren2013"])
-        .combine_first(df["nb_grandchildren2015"])
-    )
-
+    df = df.merge(grandchildren, on=["hhid", "year"], how="left")
     return df
 
 
@@ -175,13 +124,14 @@ def finance(df):
         file_path = f"/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/sharew{wave}_rel8-0-0_ALL_datasets_stata/sharew{wave}_rel8-0-0_gv_imputations.dta"
         data = pd.read_stata(file_path, convert_categoricals=False)
         data["wave"] = wave
+        data = data.rename(columns={f"hhid{wave}": "hhid"})
+        data = data.groupby(["hhid", "wave"])[["thinc", "thinc2"]].max().reset_index()
         dfs.append(data)
 
-    data = pd.concat(dfs, ignore_index=True)
+    data = pd.concat(dfs, axis=0, ignore_index=True)
+    data["thinc"] = np.where(data["thinc"] < 0, data["thinc2"], data["thinc"])
 
-    df = df.merge(
-        data[["mergeid", "wave", "thinc", "thinc2"]], on=["mergeid", "wave"], how="left"
-    )
+    df = df.merge(data, on=["hhid", "wave"], how="left")
 
     # Add investments and life insurance
     df[["as062_", "as063_", "as064_", "as065_", "as066_", "as067_"]] = (
@@ -190,62 +140,25 @@ def finance(df):
         .fillna(0)
         .astype("int")
     )
-    inv2011 = (
-        df[df.wave == 4]
-        .groupby("hhid4")[["as062_", "as063_", "as064_", "as065_", "as066_", "as067_"]]
-        .max()
-        .reset_index()
-        .rename(columns={"as067_": "life_insurance4"})
-    )
-    inv2013 = (
-        df[df.wave == 5]
-        .groupby("hhid5")[["as062_", "as063_", "as064_", "as065_", "as066_", "as067_"]]
-        .max()
-        .reset_index()
-        .rename(columns={"as067_": "life_insurance5"})
-    )
-    inv2015 = (
-        df[df.wave == 6]
-        .groupby("hhid6")[["as062_", "as063_", "as064_", "as065_", "as066_", "as067_"]]
-        .max()
-        .reset_index()
-        .rename(columns={"as067_": "life_insurance6"})
-    )
 
-    inv2011["investment4"] = (
-        (inv2011[["as062_", "as063_", "as064_", "as065_", "as066_"]] == 1)
+    inv = (
+        df.groupby(["hhid", "year"])[
+            ["as062_", "as063_", "as064_", "as065_", "as066_", "as067_"]
+        ]
+        .max()
+        .reset_index()
+    )
+    inv["investment"] = (
+        (inv[["as062_", "as063_", "as064_", "as065_", "as066_"]] == 1)
         .any(axis=1)
         .astype(int)
     )
-    inv2013["investment5"] = (
-        (inv2013[["as062_", "as063_", "as064_", "as065_", "as066_"]] == 1)
-        .any(axis=1)
-        .astype(int)
-    )
-    inv2015["investment6"] = (
-        (inv2015[["as062_", "as063_", "as064_", "as065_", "as066_"]] == 1)
-        .any(axis=1)
-        .astype(int)
-    )
-    df = df.merge(
-        inv2011[["hhid4", "investment4", "life_insurance4"]], on="hhid4", how="left"
-    )
-    df = df.merge(
-        inv2013[["hhid5", "investment5", "life_insurance5"]], on="hhid5", how="left"
-    )
-    df = df.merge(
-        inv2015[["hhid6", "investment6", "life_insurance6"]], on="hhid6", how="left"
-    )
+    inv = inv.rename(columns={"as067_": "life_insurance"})
 
-    df["investment"] = (
-        df["investment4"]
-        .combine_first(df["investment5"])
-        .combine_first(df["investment6"])
-    )
-    df["life_insurance"] = (
-        df["life_insurance4"]
-        .combine_first(df["life_insurance5"])
-        .combine_first(df["life_insurance6"])
+    df = df.merge(
+        inv[["hhid", "year", "investment", "life_insurance"]],
+        on=["hhid", "year"],
+        how="left",
     )
 
     return df
@@ -449,6 +362,7 @@ def share_preprocessing(df, data_with_isco):
     df = df[
         [
             "mergeid",
+            "hhid",
             "wave",
             "year",
             "age",

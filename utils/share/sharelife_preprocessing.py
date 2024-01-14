@@ -144,7 +144,7 @@ def calculate_education_years(waves):
         data = pd.read_stata(file_path, convert_categoricals=False)
         dfs.append(data)
 
-    dn_data = pd.concat(dfs, ignore_index=True)
+    dn_data = pd.concat(dfs, axis=0, ignore_index=True)
 
     edu_sum = dn_data.groupby("mergeid").dn041_.sum().to_frame().reset_index()
     edu_sum = edu_sum[(edu_sum.dn041_ >= 0) & (edu_sum.dn041_ <= 40)].reset_index(
@@ -228,7 +228,7 @@ def sharelife_add_job(df):
         data = pd.read_stata(file_path, convert_categoricals=False)
         dfs.append(data)
 
-    ep_data = pd.concat(dfs, ignore_index=True)
+    ep_data = pd.concat(dfs, axis=0, ignore_index=True)
     ep_data = ep_data[ep_data["mergeid"].isin(df["mergeid"])].reset_index(drop=True)
     ep_data = ep_data[
         (ep_data.ep141d1 != "Selected")

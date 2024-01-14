@@ -1,0 +1,181 @@
+---
+title: "Models"
+output: html_notebook
+---
+
+### Load libraries
+
+```{r}
+library(plm)
+library(lmtest)
+library(dplyr)
+library(crosstable)
+```
+
+### Fixed effects
+
+```{r}
+data <- read.csv("final_w456.csv")
+#data <- read.csv("data_clean_w46.csv")
+```
+
+```{r}
+# age squared
+data$age_squared <- data$age^2
+```
+
+# work_horizon_change continuous
+
+```{r}
+fe_mod <- plm(eurod ~ work_horizon + work_horizon_change + age + I(age_squared) + partnerinhh + nb_children + gender + yrseducation, #+ jqi_monthly_earnings + jqi_skills_discretion + jqi_social_environment + jqi_physical_environment + jqi_intensity + jqi_prospects + jqi_working_time_quality + factor(country) + factor(isco),
+               data = data,
+               index = c("mergeid", "year"),
+               model = "within")
+coeftest(fe_mod, vcov. = vcovHC, type = "HC1")
+```
+
+# work_horizon_change binary (1 if >1)
+
+```{r}
+data$work_horizon_change_bin <- ifelse(data$work_horizon_change > 1, 1, 0)
+
+fe_mod <- plm(eurod ~ work_horizon + work_horizon_change_bin + age + I(age_squared) + partnerinhh + nb_children + gender + yrseducation, #+ jqi_monthly_earnings + jqi_skills_discretion + jqi_social_environment + jqi_physical_environment + jqi_intensity + jqi_prospects + jqi_working_time_quality + factor(isco) + factor(country),
+               data = data,
+               index = c("mergeid", "year"),
+               model = "within")
+coeftest(fe_mod, vcov. = vcovHC, type = "HC1")
+```
+
+# work_horizon_change categoric
+
+```{r}
+data$work_horizon_change_cat <- cut(data$work_horizon_change, breaks = c(-Inf, 0, 1, 2, Inf), labels = c("0", "<1", "<2", "2+"), include.lowest = TRUE)
+
+
+fe_mod <- plm(eurod ~ work_horizon + work_horizon_change_cat + age + I(age_squared) + partnerinhh + nb_children + gender + yrseducation + jqi_monthly_earnings + jqi_skills_discretion + jqi_social_environment + jqi_physical_environment + jqi_intensity + jqi_prospects + jqi_working_time_quality + factor(country) + factor(isco),
+               data = data,
+               index = c("mergeid", "year"),
+               model = "within")
+coeftest(fe_mod, vcov. = vcovHC, type = "HC1")
+```
+
+
+
+### DID
+Load data
+```{r}
+data <- read.csv("/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/4digits_w46_year_balanced.csv")
+```
+
+Create some additional variables
+```{r}
+# Explanatory variables
+# age squared
+data$age_squared <- data$age^2
+# income log
+data$thinc_log <- log(data$thinc + 1)
+data$thinc2_log <- log(data$thinc2 + 1)
+# work horizon change binary
+data$work_horizon_change_bin0 <- ifelse(data$work_horizon_change > 0, 1, 0)
+data$work_horizon_change_bin1 <- ifelse(data$work_horizon_change > 1, 1, 0)
+# work horizon change categorical
+data$work_horizon_change_cat <- cut(data$work_horizon_change, breaks = c(-Inf, 0, 1, 2, Inf), labels = c("0", "<1", "<2", "2+"), include.lowest = TRUE)
+
+# DID variables
+# post treatment period
+data$time = ifelse(data$year >= 2015, 1, 0)
+# treatment group if work_horizon_change > 0
+mergeids_to_treat <- data %>%
+  filter(time == 1 & work_horizon_change > 0) %>%
+  select(mergeid) %>%
+  distinct()
+data <- data %>%
+  mutate(treated = ifelse(mergeid %in% mergeids_to_treat$mergeid, 1, 0))
+# did
+data$did = data$time * data$treated
+```
+
+Descriptive statistics
+```{r}
+# demographics
+data_summary <- data %>% dplyr::select(gender, age, nb_children, nb_grandchildren, partnerinhh, yrseducation, thinc, investment, life_insurance)
+knitr::kable(psych::describe(data_summary, skew = FALSE), digits = c(1,4,2,2,1,1,1,3))
+```
+
+```{r}
+# work
+data_summary <- data %>% dplyr::select(yrscontribution, retirement_age, work_horizon, work_horizon_change, jqi_skills_discretion, jqi_physical_environment, jqi_social_environment, jqi_working_time_quality, jqi_prospects, jqi_intensity, jqi_sum)
+knitr::kable(psych::describe(data_summary, skew = FALSE), digits = c(1,4,2,2,1,1,1,3))
+```
+
+```{r}
+# health
+data_summary <- data %>% dplyr::select(sphus, sphus2, chronic, chronic2, eurod, eurodcat, affective_suffering, motivation_lack)
+knitr::kable(psych::describe(data_summary, skew = FALSE), digits = c(1,4,2,2,1,1,1,3))
+```
+
+Cross table and different tests
+```{r}
+# demographics
+crosstable(data, c(gender, age, nb_children, nb_grandchildren, partnerinhh, yrseducation, thinc, investment, life_insurance), by=eurodcat, test=TRUE) %>%
+  as_flextable(fontsizes = list(body = 8, subheaders = 8, header = 8),)
+```
+
+```{r}
+# work
+crosstable(data, c(yrscontribution, retirement_age, work_horizon, work_horizon_change, work_horizon_change_bin0, work_horizon_change_bin1, work_horizon_change_cat, job_status, industry, jqi_skills_discretion, jqi_physical_environment, jqi_social_environment, jqi_working_time_quality, jqi_prospects, jqi_intensity, jqi_sum), by=eurodcat, test=TRUE) %>%
+  as_flextable(fontsizes = list(body = 8, subheaders = 8, header = 8),)
+```
+
+```{r}
+# health
+crosstable(data, c(sphus, sphus2, chronic, chronic2), by=eurodcat, test=TRUE) %>%
+  as_flextable(fontsizes = list(body = 8, subheaders = 8, header = 8),)
+```
+
+# Basic DID
+
+```{r}
+didreg = lm(eurod ~ treated + time + did, data = data)
+summary(didreg)
+```
+
+# DID with explanatory variables
+```{r}
+didreg = lm(eurod ~ treated + time + did + age + I(age_squared) + gender + nb_children + nb_grandchildren + partnerinhh + yrseducation + thinc + thinc_log + investment + life_insurance + sphus + chronic + work_horizon + jqi_skills_discretion + jqi_physical_environment + jqi_social_environment + jqi_working_time_quality + jqi_prospects + jqi_intensity + factor(industry) + factor(country), data = data)
+summary(didreg)
+```
+
+# DID with explanatory variables EuroD binary
+```{r}
+logit_reg <- glm(eurodcat ~ treated + time + did + age + I(age_squared) + gender + nb_children + nb_grandchildren + partnerinhh + yrseducation + thinc + thinc_log + investment + life_insurance + sphus + chronic + work_horizon + jqi_skills_discretion + jqi_physical_environment + jqi_social_environment + jqi_working_time_quality + jqi_prospects + jqi_intensity + factor(industry) + factor(country), data = data,
+                 family = binomial(link = "logit"))
+summary(logit_reg)
+```
+
+# DID with fixed effects
+```{r}
+pdata <- pdata.frame(data, index = c("mergeid", "year"))
+```
+
+```{r}
+didreg <- plm(eurod ~ treated + time + did + age + I(age_squared) + gender + nb_children + nb_grandchildren + partnerinhh + yrseducation + thinc + thinc_log + investment + life_insurance + sphus + chronic + work_horizon + jqi_skills_discretion + jqi_physical_environment + jqi_social_environment + jqi_working_time_quality + jqi_prospects + jqi_intensity,
+              data = pdata, model = "within", effect = "individual")
+
+# Display summary
+summary(didreg)
+```
+
+
+
+
+
+# DID for physcial environment above mean
+
+```{r}
+mean_physical_environment <- mean(data$jqi_physical_environment)
+filtered_data <- data[data$jqi_physical_environment > mean_physical_environment, ]
+
+didreg = lm(eurod ~ treated + time + did + age + I(age_squared) + gender + nb_children + partnerinhh + yrseducation + work_horizon + jqi_monthly_earnings + jqi_skills_discretion + jqi_social_environment + jqi_intensity + jqi_prospects + jqi_working_time_quality, data = filtered_data)
+summary(didreg)
+```

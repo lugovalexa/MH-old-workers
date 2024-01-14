@@ -82,5 +82,7 @@ def merge_share_ewcs(
     else:
         df = df.merge(indexes, on=["year", "country", "isco"], how="inner")
 
+    df = df[df.country != "Germany"].reset_index(drop=True)
+
     # Save to output CSV
     df.to_csv(output_csv, index=False)
