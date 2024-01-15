@@ -60,6 +60,14 @@ def merge_share_ewcs(
     if exclude_wave_5:
         df = df[df.wave != 5].reset_index(drop=True)
 
+    # Merge on specified columns
+    if not_country_wise:
+        df = df.merge(indexes, on=["year", "isco"], how="left")
+    else:
+        df = df.merge(indexes, on=["year", "country", "isco"], how="left")
+
+    df = df.dropna().reset_index(drop=True)
+
     # Optional: balanced panel
     if balanced:
         if exclude_wave_5:
@@ -75,12 +83,6 @@ def merge_share_ewcs(
                 unique_mergeid_w5
             ).intersection(unique_mergeid_w6)
             df = df[df["mergeid"].isin(intersection_ids)].reset_index(drop=True)
-
-    # Merge on specified columns
-    if not_country_wise:
-        df = df.merge(indexes, on=["year", "isco"], how="inner")
-    else:
-        df = df.merge(indexes, on=["year", "country", "isco"], how="inner")
 
     df = df[df.country != "Germany"].reset_index(drop=True)
 

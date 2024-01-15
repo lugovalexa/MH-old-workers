@@ -57,7 +57,7 @@ def calculate_retirement_age(row):
         return None
 
 
-def calculate_horizon_change(row):
+def calculate_horizon_change1(row):
     """
     Calculate the retirement age change based on country- and year-specific retirement reforms.
     Takes into account the maximum possible criteria of eligibility to change, including age, gender, number of children, industry of employment, etc.
@@ -85,6 +85,41 @@ def calculate_horizon_change(row):
         "Slovenia": slovenia_change1,
         "Spain": spain_change1,
         "Switzerland": switzerland_change1,
+    }
+    if country in country_functions_change:
+        return country_functions_change[country](row)
+    else:
+        return None
+
+
+def calculate_horizon_change(row):
+    """
+    Calculate the retirement age change based on country- and year-specific retirement reforms.
+    Takes into account the maximum possible criteria of eligibility to change, including age, gender, number of children, industry of employment, etc.
+
+    Parameters:
+    - row (pd.Series): A Pandas Series representing a row of a DataFrame containing relevant information.
+
+    Returns:
+    - int or None: The calculated retirement age change for the given country, or None if the country is not found.
+
+    Note:
+    - This function relies on specific functions for each country to calculate retirement age.
+    - The functions for each country should are defined separately (e.g., austria_change, belgium_change) and are located in utils/retirement folder.
+    """
+    country = row["country"]
+    country_functions_change = {
+        "Austria": austria_change,
+        "Belgium": belgium_change,
+        "Czech Republic": czech_republic_change,
+        "Denmark": denmark_change,
+        "Estonia": estonia_change,
+        "France": france_change,
+        "Germany": germany_change,
+        "Italy": italy_change,
+        "Slovenia": slovenia_change,
+        "Spain": spain_change,
+        "Switzerland": switzerland_change,
     }
     if country in country_functions_change:
         return country_functions_change[country](row)
@@ -164,7 +199,8 @@ def share_final_preprocessing(df):
     df["work_horizon"] = df["retirement_age"] - df["age"]
 
     # Calculate change of retirement age induced by reform
-    df["work_horizon_change"] = df.apply(calculate_horizon_change, axis=1)
+    df["work_horizon_change_yearly"] = df.apply(calculate_horizon_change, axis=1)
+    df["work_horizon_change"] = df.apply(calculate_horizon_change1, axis=1)
 
     print(
         "Retirement age, work horizon and work horizon change by reforms - calculated"
