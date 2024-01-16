@@ -145,14 +145,14 @@ def describe_data(df):
         round(
             df[
                 [
-                    "jqi_monthly_earnings",
-                    "jqi_skills_discretion",
-                    "jqi_social_environment",
-                    "jqi_physical_environment",
-                    "jqi_intensity",
-                    "jqi_prospects",
-                    "jqi_working_time_quality",
-                    "jqi_sum",
+                    "jqi_monthly_earnings_pure",
+                    "jqi_skills_discretion_pure",
+                    "jqi_social_environment_pure",
+                    "jqi_physical_environment_pure",
+                    "jqi_intensity_pure",
+                    "jqi_prospects_pure",
+                    "jqi_working_time_quality_pure",
+                    "jqi_sum_pure",
                 ]
             ].describe(),
             2,

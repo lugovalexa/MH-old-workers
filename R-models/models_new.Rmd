@@ -1,0 +1,185 @@
+---
+title: "Models"
+output: html_notebook
+---
+
+### Load libraries
+
+```{r}
+library(plm)
+library(lmtest)
+library(dplyr)
+library(crosstable)
+```
+
+### Load data
+```{r}
+data <- read.csv("/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/4digits_w46_year_balanced.csv")
+```
+
+### Create some additional variables
+```{r}
+# Explanatory variables
+# age squared
+data$age_squared <- data$age^2
+# income log
+data$thinc_log <- log(data$thinc + 1)
+data$thinc2_log <- log(data$thinc2 + 1)
+# work horizon change binary
+data$work_horizon_change_bin0 <- ifelse(data$work_horizon_change > 0, 1, 0)
+data$work_horizon_change_bin1 <- ifelse(data$work_horizon_change > 1, 1, 0)
+# work horizon change categorical
+data$work_horizon_change_cat <- cut(data$work_horizon_change, breaks = c(-Inf, 0, 1, 2, Inf), labels = c("0", "<1", "<2", "2+"), include.lowest = TRUE)
+
+# DID variables
+# post treatment period
+data$time = ifelse(data$year >= 2015, 1, 0)
+# treatment group if work_horizon_change > 0
+mergeids_to_treat <- data %>%
+  filter(time == 1 & work_horizon_change > 0) %>%
+  select(mergeid) %>%
+  distinct()
+data <- data %>%
+  mutate(treated = ifelse(mergeid %in% mergeids_to_treat$mergeid, 1, 0))
+# did
+data$did = data$time * data$treated
+
+# Determine cell fol fixed effects/ cluster standard errors
+data$cell <- paste(data$country, data$gender, sep = "_")
+
+# Interactions of indexes
+interaction_terms <- model.matrix(~ (jqi_skills_discretion + jqi_physical_environment +
+  jqi_social_environment + jqi_working_time_quality +
+  jqi_prospects + jqi_intensity)^2, data = data)
+
+interaction_terms <- interaction_terms[, -c(1, 2, 3, 4, 5, 6, 7)]
+interaction_terms_colnames <- colnames(interaction_terms)
+
+data <- cbind(data, interaction_terms)
+```
+
+### Descriptive statistics
+```{r}
+# demographics
+data_summary <- data %>% dplyr::select(gender, age, nb_children, nb_grandchildren, partnerinhh, yrseducation, thinc, investment, life_insurance)
+knitr::kable(psych::describe(data_summary, skew = FALSE), digits = c(1,4,2,2,1,1,1,3))
+```
+
+```{r}
+# work
+data_summary <- data %>% dplyr::select(yrscontribution, retirement_age, work_horizon, work_horizon_change, jqi_skills_discretion_pure, jqi_physical_environment_pure, jqi_social_environment_pure, jqi_working_time_quality_pure, jqi_prospects_pure, jqi_intensity_pure, jqi_sum_pure)
+knitr::kable(psych::describe(data_summary, skew = FALSE), digits = c(1,4,2,2,1,1,1,3))
+```
+
+```{r}
+# health
+data_summary <- data %>% dplyr::select(sphus, sphus2, chronic, chronic2, eurod, eurodcat, affective_suffering, motivation_lack)
+knitr::kable(psych::describe(data_summary, skew = FALSE), digits = c(1,4,2,2,1,1,1,3))
+```
+
+### Cross table and different tests
+```{r}
+# demographics
+crosstable(data, c(gender, age, nb_children, nb_grandchildren, partnerinhh, yrseducation, thinc, investment, life_insurance), by=eurodcat, test=TRUE) %>%
+  as_flextable(fontsizes = list(body = 8, subheaders = 8, header = 8),)
+```
+
+```{r}
+# work
+crosstable(data, c(yrscontribution, retirement_age, work_horizon, work_horizon_change, work_horizon_change_bin0, work_horizon_change_bin1, work_horizon_change_cat, job_status), by=eurodcat, test=TRUE) %>%
+  as_flextable(fontsizes = list(body = 8, subheaders = 8, header = 8),)
+```
+
+
+```{r}
+# work quality
+crosstable(data, c(jqi_skills_discretion_pure, jqi_physical_environment_pure, jqi_social_environment_pure, jqi_working_time_quality_pure, jqi_prospects_pure, jqi_intensity_pure, jqi_sum_pure), by=eurodcat, test=TRUE) %>%
+  as_flextable(fontsizes = list(body = 8, subheaders = 8, header = 8),)
+```
+
+
+```{r}
+# health
+crosstable(data, c(sphus, sphus2, chronic, chronic2), by=eurodcat, test=TRUE) %>%
+  as_flextable(fontsizes = list(body = 8, subheaders = 8, header = 8),)
+```
+
+# DID models
+```{r}
+interaction_formula <- paste(interaction_terms_colnames, collapse = " + ")
+full_formula <- reformulate(c("treated", "time", "did", "age", "I(age_squared)", "nb_children",
+                              "nb_grandchildren", "partnerinhh", "yrseducation", "thinc",
+                              "thinc_log", "investment", "life_insurance", "sphus", "chronic",
+                              "work_horizon", "jqi_skills_discretion",
+                              "jqi_physical_environment", "jqi_social_environment",
+                              "jqi_working_time_quality", "jqi_prospects",
+                              "jqi_intensity", interaction_formula, "factor(cell)",
+                              "factor(industry)"), response = "eurod")
+noint_formula <- reformulate(c("treated", "time", "did", "age", "I(age_squared)", "nb_children",
+                              "nb_grandchildren", "partnerinhh", "yrseducation", "thinc",
+                              "thinc_log", "investment", "life_insurance", "sphus", "chronic",
+                              "work_horizon", "jqi_skills_discretion",
+                              "jqi_physical_environment", "jqi_social_environment",
+                              "jqi_working_time_quality", "jqi_prospects",
+                              "jqi_intensity", "factor(cell)",
+                              "factor(industry)"), response = "eurod")
+```
+
+```{r}
+# DID full dataset
+did_full <- lm(full_formula, data = data, weights = my_wgt)
+# DID full dataset panel fixed effects
+did_full_plm = plm(noint_formula, data = data, weights = my_wgt, index = c("mergeid","year"), model = "within")
+
+# DID female/male
+did_female = lm(full_formula, data = subset(data, gender == 1), weights = my_wgt)
+did_male = lm(full_formula, data = subset(data, gender == 0), weights = my_wgt)
+
+# DID female/male jqi_skills_discretion above/below mean
+did_female_skills_high = lm(full_formula, data = subset(data, gender == 1 & jqi_skills_discretion > mean(jqi_skills_discretion)), weights = my_wgt)
+did_female_skills_low = lm(full_formula, data = subset(data, gender == 1 & jqi_skills_discretion <= mean(jqi_skills_discretion)), weights = my_wgt)
+did_male_skills_high = lm(full_formula, data = subset(data, gender == 0 & jqi_skills_discretion > mean(jqi_skills_discretion)), weights = my_wgt)
+did_male_skills_low = lm(full_formula, data = subset(data, gender == 0 & jqi_skills_discretion <= mean(jqi_skills_discretion)), weights = my_wgt)
+
+# DID female/male jqi_physical_environment above/below mean
+did_female_physical_high = lm(full_formula, data = subset(data, gender == 1 & jqi_physical_environment > mean(jqi_physical_environment)), weights = my_wgt)
+did_female_physical_low = lm(full_formula, data = subset(data, gender == 1 & jqi_physical_environment <= mean(jqi_physical_environment)), weights = my_wgt)
+did_male_physical_high = lm(full_formula, data = subset(data, gender == 0 & jqi_physical_environment > mean(jqi_physical_environment)), weights = my_wgt)
+did_male_physical_low = lm(full_formula, data = subset(data, gender == 0 & jqi_physical_environment <= mean(jqi_physical_environment)), weights = my_wgt)
+
+# DID female/male jqi_social_environment above/below mean
+did_female_social_high = lm(full_formula, data = subset(data, gender == 1 & jqi_social_environment > mean(jqi_social_environment)), weights = my_wgt)
+did_female_social_low = lm(full_formula, data = subset(data, gender == 1 & jqi_social_environment <= mean(jqi_social_environment)), weights = my_wgt)
+did_male_social_high = lm(full_formula, data = subset(data, gender == 0 & jqi_social_environment > mean(jqi_social_environment)), weights = my_wgt)
+did_male_social_low = lm(full_formula, data = subset(data, gender == 0 & jqi_social_environment <= mean(jqi_social_environment)), weights = my_wgt)
+
+# DID female/male jqi_working_time_quality above/below mean
+did_female_time_high = lm(full_formula, data = subset(data, gender == 1 & jqi_working_time_quality > mean(jqi_working_time_quality)), weights = my_wgt)
+did_female_time_low = lm(full_formula, data = subset(data, gender == 1 & jqi_working_time_quality <= mean(jqi_working_time_quality)), weights = my_wgt)
+did_male_time_high = lm(full_formula, data = subset(data, gender == 0 & jqi_working_time_quality > mean(jqi_working_time_quality)), weights = my_wgt)
+did_male_time_low = lm(full_formula, data = subset(data, gender == 0 & jqi_working_time_quality <= mean(jqi_working_time_quality)), weights = my_wgt)
+
+# DID female/male jqi_prospects above/below mean
+did_female_prospects_high = lm(full_formula, data = subset(data, gender == 1 & jqi_prospects > mean(jqi_prospects)), weights = my_wgt)
+did_female_prospects_low = lm(full_formula, data = subset(data, gender == 1 & jqi_prospects <= mean(jqi_prospects)), weights = my_wgt)
+did_male_prospects_high = lm(full_formula, data = subset(data, gender == 0 & jqi_prospects > mean(jqi_prospects)), weights = my_wgt)
+did_male_prospects_low = lm(full_formula, data = subset(data, gender == 0 & jqi_prospects <= mean(jqi_prospects)), weights = my_wgt)
+
+# DID female/male jqi_intensity above/below mean
+did_female_intensity_high = lm(full_formula, data = subset(data, gender == 1 & jqi_intensity > mean(jqi_intensity)), weights = my_wgt)
+did_female_intensity_low = lm(full_formula, data = subset(data, gender == 1 & jqi_intensity <= mean(jqi_intensity)), weights = my_wgt)
+did_male_intensity_high = lm(full_formula, data = subset(data, gender == 0 & jqi_intensity > mean(jqi_intensity)), weights = my_wgt)
+did_male_intensity_low = lm(full_formula, data = subset(data, gender == 0 & jqi_intensity <= mean(jqi_intensity)), weights = my_wgt)
+```
+
+```{r}
+summary(did_female_skills_low)
+```
+
+Clusterisation of standard errors
+```{r}
+#clustered_se <- vcovHC(did_full, type = "HC1", cluster = "cell") # Cluster standard errors at the country level
+#robust_se <- sqrt(diag(clustered_se)) # Obtain robust standard errors
+
+#coeftest(did_full, vcov. = clustered_se)
+```

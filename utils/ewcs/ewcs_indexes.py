@@ -399,17 +399,17 @@ def sum_wq_index(df):
     )
 
     # Calculate the weighted version
-    df["jqi_sum_weighted"] = (
-        +df["jqi_skills_discretion_weighted"]
-        + df["jqi_social_environment_weighted"]
-        + df["jqi_physical_environment_weighted"]
-        + df["jqi_intensity_weighted"]
-        + df["jqi_prospects_weighted"]
-        + df["jqi_working_time_quality_weighted"]
+    df["jqi_sum_pure"] = (
+        +df["jqi_skills_discretion_pure"]
+        + df["jqi_social_environment_pure"]
+        + df["jqi_physical_environment_pure"]
+        + df["jqi_intensity_pure"]
+        + df["jqi_prospects_pure"]
+        + df["jqi_working_time_quality_pure"]
     )
 
-    print("JQI working quality index")
-    print(df.groupby("year").jqi_sum.describe())
+    print("JQI working quality index pure (no weights applied)")
+    print(df.groupby("year").jqi_sum_pure.describe())
 
     return df
 
