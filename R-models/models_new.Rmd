@@ -10,6 +10,12 @@ library(plm)
 library(lmtest)
 library(dplyr)
 library(crosstable)
+library(did)
+library(car)
+library(corrplot)
+library(ggplot2)
+library(glmnet)
+library(MASS)
 ```
 
 ### Load data
@@ -25,20 +31,21 @@ data$age_squared <- data$age^2
 # income log
 data$thinc_log <- log(data$thinc + 1)
 data$thinc2_log <- log(data$thinc2 + 1)
+# children and grandchildren together
+
 # work horizon change binary
-data$work_horizon_change_bin0 <- ifelse(data$work_horizon_change > 0, 1, 0)
-data$work_horizon_change_bin1 <- ifelse(data$work_horizon_change > 1, 1, 0)
+data$work_horizon_change_bin0 <- ifelse(data$work_horizon_change_total > 0, 1, 0)
+data$work_horizon_change_bin1 <- ifelse(data$work_horizon_change_total > 1, 1, 0)
 # work horizon change categorical
-data$work_horizon_change_cat <- cut(data$work_horizon_change, breaks = c(-Inf, 0, 1, 2, Inf), labels = c("0", "<1", "<2", "2+"), include.lowest = TRUE)
+data$work_horizon_change_cat <- cut(data$work_horizon_change_total, breaks = c(-Inf, 0, 1, 2, Inf), labels = c("0", "<1", "<2", "2+"), include.lowest = TRUE)
 
 # DID variables
 # post treatment period
 data$time = ifelse(data$year >= 2015, 1, 0)
 # treatment group if work_horizon_change > 0
 mergeids_to_treat <- data %>%
-  filter(time == 1 & work_horizon_change > 0) %>%
-  select(mergeid) %>%
-  distinct()
+  filter(time == 1 & work_horizon_change_total > 0) %>%
+  distinct(mergeid)
 data <- data %>%
   mutate(treated = ifelse(mergeid %in% mergeids_to_treat$mergeid, 1, 0))
 # did
@@ -56,9 +63,37 @@ interaction_terms <- interaction_terms[, -c(1, 2, 3, 4, 5, 6, 7)]
 interaction_terms_colnames <- colnames(interaction_terms)
 
 data <- cbind(data, interaction_terms)
+
+# For YTR between 0 and 1 only
+#sum_by_mergeid <- data %>% group_by(mergeid) %>% summarize(total_work_horizon_change = sum(work_horizon_change, na.rm = TRUE))
+#mergeid_to_remove <- sum_by_mergeid %>% filter(total_work_horizon_change > 1) %>% pull(mergeid)
+#data <- data %>% filter(!(mergeid %in% mergeid_to_remove))
+```
+
+Number of treated individuals
+```{r}
+sum(data$did)
 ```
 
 ### Descriptive statistics
+
+```{r}
+# correlations
+cor_matrix <- cor(data[, c("age","gender","nb_children","nb_grandchildren","partnerinhh","yrseducation","thinc","investment","life_insurance","sphus","chronic",
+                           "eurod","work_horizon", "work_horizon_change", "jqi_skills_discretion_pure", "jqi_physical_environment_pure",
+                           "jqi_social_environment_pure","jqi_working_time_quality_pure", "jqi_prospects_pure", "jqi_intensity_pure")])
+
+corrplot(cor_matrix, method = "color", col = colorRampPalette(c("lightgreen", "white", "salmon"))(20),tl.cex = 0.7)
+```
+```{r}
+# correlations
+cor_matrix <- cor(data[, c("jqi_skills_discretion_pure", "jqi_physical_environment_pure",
+                           "jqi_social_environment_pure","jqi_working_time_quality_pure", "jqi_prospects_pure", "jqi_intensity_pure")])
+
+corrplot(cor_matrix, method = "number", col = colorRampPalette(c("lightgreen", "white", "salmon"))(20),tl.cex = 0.7)
+```
+
+
 ```{r}
 # demographics
 data_summary <- data %>% dplyr::select(gender, age, nb_children, nb_grandchildren, partnerinhh, yrseducation, thinc, investment, life_insurance)
@@ -78,6 +113,12 @@ knitr::kable(psych::describe(data_summary, skew = FALSE), digits = c(1,4,2,2,1,1
 ```
 
 ### Cross table and different tests
+```{r}
+crosstable(subset(data, time == 0), c(eurod, eurodcat), by=treated, test=TRUE) %>%
+  as_flextable(fontsizes = list(body = 8, subheaders = 8, header = 8),)
+```
+
+
 ```{r}
 # demographics
 crosstable(data, c(gender, age, nb_children, nb_grandchildren, partnerinhh, yrseducation, thinc, investment, life_insurance), by=eurodcat, test=TRUE) %>%
@@ -107,79 +148,141 @@ crosstable(data, c(sphus, sphus2, chronic, chronic2), by=eurodcat, test=TRUE) %>
 # DID models
 ```{r}
 interaction_formula <- paste(interaction_terms_colnames, collapse = " + ")
-full_formula <- reformulate(c("treated", "time", "did", "age", "I(age_squared)", "nb_children",
-                              "nb_grandchildren", "partnerinhh", "yrseducation", "thinc",
-                              "thinc_log", "investment", "life_insurance", "sphus", "chronic",
+full_formula <- reformulate(c("time", "treated", "did", "age", "I(age^2)", "nb_children",
+                              "nb_grandchildren", "partnerinhh",  "yrseducation", "thinc2",
+                              "thinc2_log", "investment", "life_insurance", "sphus", "chronic",
                               "work_horizon", "jqi_skills_discretion",
                               "jqi_physical_environment", "jqi_social_environment",
                               "jqi_working_time_quality", "jqi_prospects",
                               "jqi_intensity", interaction_formula, "factor(cell)",
                               "factor(industry)"), response = "eurod")
-noint_formula <- reformulate(c("treated", "time", "did", "age", "I(age_squared)", "nb_children",
-                              "nb_grandchildren", "partnerinhh", "yrseducation", "thinc",
-                              "thinc_log", "investment", "life_insurance", "sphus", "chronic",
+noint_formula <- reformulate(c("treated", "did", "age", "I(age^2)", "nb_children",
+                              "nb_grandchildren", "partnerinhh", "yrseducation", "thinc2",
+                              "thinc2_log", "investment", "life_insurance", "sphus", "chronic",
                               "work_horizon", "jqi_skills_discretion",
                               "jqi_physical_environment", "jqi_social_environment",
                               "jqi_working_time_quality", "jqi_prospects",
                               "jqi_intensity", "factor(cell)",
                               "factor(industry)"), response = "eurod")
+noind_formula <- reformulate(c("time", "treated", "did", "age", "I(age^2)", "nb_children",
+                              "nb_grandchildren", "partnerinhh", "yrseducation", "thinc2",
+                              "thinc2_log", "investment", "life_insurance", "sphus", "chronic",
+                              "work_horizon", "jqi_sum", "factor(cell)",
+                              "factor(industry)"), response = "eurod")
 ```
+
+
+
+```{r}
+data$eurodlog <- log(data$eurod + 1e-8)
+did_full <- lm(eurodlog ~ time + treated + did + age + I(age^2) + nb_children +
+                              nb_grandchildren + partnerinhh + yrseducation + thinc2 +
+                              thinc2_log + investment + life_insurance + sphus + chronic +
+                              work_horizon + jqi_skills_discretion +
+                              jqi_physical_environment + jqi_social_environment +
+                              jqi_working_time_quality + jqi_prospects +
+                              jqi_intensity + factor(cell) + factor(industry), data = data, weights = my_wgt)
+#did_full <- glm(noint_formula, data = data, weights = my_wgt,family = poisson)
+#did_full <- glm(noint_formula, data = data, weights = my_wgt,family = binomial)
+summary(did_full)
+```
+
 
 ```{r}
 # DID full dataset
 did_full <- lm(full_formula, data = data, weights = my_wgt)
 # DID full dataset panel fixed effects
-did_full_plm = plm(noint_formula, data = data, weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_full_plm = plm(full_formula, data = data, weights = my_wgt, index = c("mergeid","year"), model = "within")
 
 # DID female/male
-did_female = lm(full_formula, data = subset(data, gender == 1), weights = my_wgt)
-did_male = lm(full_formula, data = subset(data, gender == 0), weights = my_wgt)
+did_female = plm(full_formula, data = subset(data, gender == 1), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_male = plm(full_formula, data = subset(data, gender == 0), weights = my_wgt, index = c("mergeid","year"), model = "within")
 
 # DID female/male jqi_skills_discretion above/below mean
-did_female_skills_high = lm(full_formula, data = subset(data, gender == 1 & jqi_skills_discretion > mean(jqi_skills_discretion)), weights = my_wgt)
-did_female_skills_low = lm(full_formula, data = subset(data, gender == 1 & jqi_skills_discretion <= mean(jqi_skills_discretion)), weights = my_wgt)
-did_male_skills_high = lm(full_formula, data = subset(data, gender == 0 & jqi_skills_discretion > mean(jqi_skills_discretion)), weights = my_wgt)
-did_male_skills_low = lm(full_formula, data = subset(data, gender == 0 & jqi_skills_discretion <= mean(jqi_skills_discretion)), weights = my_wgt)
+did_female_skills_high = plm(full_formula, data = subset(data, gender == 1 & jqi_skills_discretion >= mean(jqi_skills_discretion)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_female_skills_low= plm(full_formula, data = subset(data, gender == 1 & jqi_skills_discretion < mean(jqi_skills_discretion)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_male_skills_high = plm(full_formula, data = subset(data, gender == 0 & jqi_skills_discretion >= mean(jqi_skills_discretion)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_male_skills_low = plm(full_formula, data = subset(data, gender == 0 & jqi_skills_discretion < mean(jqi_skills_discretion)), weights = my_wgt, index = c("mergeid","year"), model = "within")
 
 # DID female/male jqi_physical_environment above/below mean
-did_female_physical_high = lm(full_formula, data = subset(data, gender == 1 & jqi_physical_environment > mean(jqi_physical_environment)), weights = my_wgt)
-did_female_physical_low = lm(full_formula, data = subset(data, gender == 1 & jqi_physical_environment <= mean(jqi_physical_environment)), weights = my_wgt)
-did_male_physical_high = lm(full_formula, data = subset(data, gender == 0 & jqi_physical_environment > mean(jqi_physical_environment)), weights = my_wgt)
-did_male_physical_low = lm(full_formula, data = subset(data, gender == 0 & jqi_physical_environment <= mean(jqi_physical_environment)), weights = my_wgt)
+did_female_physical_high = plm(full_formula, data = subset(data, gender == 1 & jqi_physical_environment >= mean(jqi_physical_environment)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_female_physical_low = plm(full_formula, data = subset(data, gender == 1 & jqi_physical_environment < mean(jqi_physical_environment)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_male_physical_high = plm(full_formula, data = subset(data, gender == 0 & jqi_physical_environment >= mean(jqi_physical_environment)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_male_physical_low = plm(full_formula, data = subset(data, gender == 0 & jqi_physical_environment < mean(jqi_physical_environment)), weights = my_wgt, index = c("mergeid","year"), model = "within")
 
 # DID female/male jqi_social_environment above/below mean
-did_female_social_high = lm(full_formula, data = subset(data, gender == 1 & jqi_social_environment > mean(jqi_social_environment)), weights = my_wgt)
-did_female_social_low = lm(full_formula, data = subset(data, gender == 1 & jqi_social_environment <= mean(jqi_social_environment)), weights = my_wgt)
-did_male_social_high = lm(full_formula, data = subset(data, gender == 0 & jqi_social_environment > mean(jqi_social_environment)), weights = my_wgt)
-did_male_social_low = lm(full_formula, data = subset(data, gender == 0 & jqi_social_environment <= mean(jqi_social_environment)), weights = my_wgt)
+did_female_social_high = plm(full_formula, data = subset(data, gender == 1 & jqi_social_environment >= mean(jqi_social_environment)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_female_social_low = plm(full_formula, data = subset(data, gender == 1 & jqi_social_environment < mean(jqi_social_environment)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_male_social_high = plm(full_formula, data = subset(data, gender == 0 & jqi_social_environment >= mean(jqi_social_environment)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_male_social_low = plm(full_formula, data = subset(data, gender == 0 & jqi_social_environment < mean(jqi_social_environment)), weights = my_wgt, index = c("mergeid","year"), model = "within")
 
 # DID female/male jqi_working_time_quality above/below mean
-did_female_time_high = lm(full_formula, data = subset(data, gender == 1 & jqi_working_time_quality > mean(jqi_working_time_quality)), weights = my_wgt)
-did_female_time_low = lm(full_formula, data = subset(data, gender == 1 & jqi_working_time_quality <= mean(jqi_working_time_quality)), weights = my_wgt)
-did_male_time_high = lm(full_formula, data = subset(data, gender == 0 & jqi_working_time_quality > mean(jqi_working_time_quality)), weights = my_wgt)
-did_male_time_low = lm(full_formula, data = subset(data, gender == 0 & jqi_working_time_quality <= mean(jqi_working_time_quality)), weights = my_wgt)
+did_female_time_high = plm(full_formula, data = subset(data, gender == 1 & jqi_working_time_quality >= mean(jqi_working_time_quality)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_female_time_low = plm(full_formula, data = subset(data, gender == 1 & jqi_working_time_quality < mean(jqi_working_time_quality)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_male_time_high = plm(full_formula, data = subset(data, gender == 0 & jqi_working_time_quality >= mean(jqi_working_time_quality)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_male_time_low = plm(full_formula, data = subset(data, gender == 0 & jqi_working_time_quality < mean(jqi_working_time_quality)), weights = my_wgt, index = c("mergeid","year"), model = "within")
 
 # DID female/male jqi_prospects above/below mean
-did_female_prospects_high = lm(full_formula, data = subset(data, gender == 1 & jqi_prospects > mean(jqi_prospects)), weights = my_wgt)
-did_female_prospects_low = lm(full_formula, data = subset(data, gender == 1 & jqi_prospects <= mean(jqi_prospects)), weights = my_wgt)
-did_male_prospects_high = lm(full_formula, data = subset(data, gender == 0 & jqi_prospects > mean(jqi_prospects)), weights = my_wgt)
-did_male_prospects_low = lm(full_formula, data = subset(data, gender == 0 & jqi_prospects <= mean(jqi_prospects)), weights = my_wgt)
+did_female_prospects_high = plm(full_formula, data = subset(data, gender == 1 & jqi_prospects >= mean(jqi_prospects)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_female_prospects_low = plm(full_formula, data = subset(data, gender == 1 & jqi_prospects < mean(jqi_prospects)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_male_prospects_high = plm(full_formula, data = subset(data, gender == 0 & jqi_prospects >= mean(jqi_prospects)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_male_prospects_low = plm(full_formula, data = subset(data, gender == 0 & jqi_prospects < mean(jqi_prospects)), weights = my_wgt, index = c("mergeid","year"), model = "within")
 
 # DID female/male jqi_intensity above/below mean
-did_female_intensity_high = lm(full_formula, data = subset(data, gender == 1 & jqi_intensity > mean(jqi_intensity)), weights = my_wgt)
-did_female_intensity_low = lm(full_formula, data = subset(data, gender == 1 & jqi_intensity <= mean(jqi_intensity)), weights = my_wgt)
-did_male_intensity_high = lm(full_formula, data = subset(data, gender == 0 & jqi_intensity > mean(jqi_intensity)), weights = my_wgt)
-did_male_intensity_low = lm(full_formula, data = subset(data, gender == 0 & jqi_intensity <= mean(jqi_intensity)), weights = my_wgt)
+did_female_intensity_high = plm(full_formula, data = subset(data, gender == 1 & jqi_intensity >= mean(jqi_intensity)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_female_intensity_low = plm(full_formula, data = subset(data, gender == 1 & jqi_intensity < mean(jqi_intensity)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_male_intensity_high = plm(full_formula, data = subset(data, gender == 0 & jqi_intensity >= mean(jqi_intensity)), weights = my_wgt, index = c("mergeid","year"), model = "within")
+did_male_intensity_low = plm(full_formula, data = subset(data, gender == 0 & jqi_intensity < mean(jqi_intensity)), weights = my_wgt, index = c("mergeid","year"), model = "within")
 ```
 
 ```{r}
-summary(did_female_skills_low)
+summary(did_full_plm)
 ```
 
-Clusterisation of standard errors
+
 ```{r}
-#clustered_se <- vcovHC(did_full, type = "HC1", cluster = "cell") # Cluster standard errors at the country level
-#robust_se <- sqrt(diag(clustered_se)) # Obtain robust standard errors
-
-#coeftest(did_full, vcov. = clustered_se)
+summary(did_female)
 ```
+
+```{r}
+summary(did_female_intensity_low)
+```
+
+
+Clusterization of standard errors
+```{r}
+clustered_se <- vcovHC(did_female, type = "HC1", cluster = "cell") # Cluster standard errors at the country level
+robust_se <- sqrt(diag(clustered_se)) # Obtain robust standard errors
+
+coeftest(did_female, vcov. = clustered_se)
+```
+
+# Tests
+```{r}
+par(mfrow = c(2, 2))
+plot(did_full)
+```
+
+Normality of residuals - DID approach is robust to this
+
+Breusch-Pagan test for heteroscedasticity
+```{r}
+bptest(did_full) #small p-value - not normal - heteroscedasticity present
+```
+
+```{r}
+# Multicollinearity VIF TEST
+vif(did_full)
+```
+
+Ensure that the treatment and control groups are comparable
+```{r}
+# crosstable
+```
+
+Parallel trends test
+```{r}
+# load previous waves and inspect eurod for treated and not treated individuals
+```
+
+`

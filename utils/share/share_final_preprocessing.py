@@ -202,6 +202,16 @@ def share_final_preprocessing(df):
     df["work_horizon_change_yearly"] = df.apply(calculate_horizon_change, axis=1)
     df["work_horizon_change"] = df.apply(calculate_horizon_change1, axis=1)
 
+    grouped_df = df.groupby("mergeid")["work_horizon_change_yearly"].sum().reset_index()
+    grouped_df.rename(
+        columns={"work_horizon_change_yearly": "work_horizon_change_total"},
+        inplace=True,
+    )
+    df = pd.merge(df, grouped_df, on="mergeid", how="left")
+    df["work_horizon_change_total"] = df["work_horizon_change_total"].where(
+        df["year"] == 2015, 0
+    )
+
     print(
         "Retirement age, work horizon and work horizon change by reforms - calculated"
     )
