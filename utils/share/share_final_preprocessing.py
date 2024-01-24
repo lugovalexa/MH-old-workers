@@ -17,8 +17,6 @@ def calculate_contribution(row):
     """
     if row["year"] == 2011:
         return row["yrscontribution2017"] - 6
-    elif row["year"] == 2013:
-        return row["yrscontribution2017"] - 4
     else:
         return row["yrscontribution2017"] - 2
 
@@ -49,80 +47,11 @@ def calculate_retirement_age(row):
         "Italy": italy_age,
         "Slovenia": slovenia_age,
         "Spain": spain_age,
+        "Sweden": sweden_age,
         "Switzerland": switzerland_age,
     }
     if country in country_functions_age:
         return country_functions_age[country](row)
-    else:
-        return None
-
-
-def calculate_horizon_change1(row):
-    """
-    Calculate the retirement age change based on country- and year-specific retirement reforms.
-    Takes into account the maximum possible criteria of eligibility to change, including age, gender, number of children, industry of employment, etc.
-
-    Parameters:
-    - row (pd.Series): A Pandas Series representing a row of a DataFrame containing relevant information.
-
-    Returns:
-    - int or None: The calculated retirement age change for the given country, or None if the country is not found.
-
-    Note:
-    - This function relies on specific functions for each country to calculate retirement age.
-    - The functions for each country should are defined separately (e.g., austria_change, belgium_change) and are located in utils/retirement folder.
-    """
-    country = row["country"]
-    country_functions_change = {
-        "Austria": austria_change1,
-        "Belgium": belgium_change1,
-        "Czech Republic": czech_republic_change1,
-        "Denmark": denmark_change1,
-        "Estonia": estonia_change1,
-        "France": france_change1,
-        "Germany": germany_change1,
-        "Italy": italy_change1,
-        "Slovenia": slovenia_change1,
-        "Spain": spain_change1,
-        "Switzerland": switzerland_change1,
-    }
-    if country in country_functions_change:
-        return country_functions_change[country](row)
-    else:
-        return None
-
-
-def calculate_horizon_change(row):
-    """
-    Calculate the retirement age change based on country- and year-specific retirement reforms.
-    Takes into account the maximum possible criteria of eligibility to change, including age, gender, number of children, industry of employment, etc.
-
-    Parameters:
-    - row (pd.Series): A Pandas Series representing a row of a DataFrame containing relevant information.
-
-    Returns:
-    - int or None: The calculated retirement age change for the given country, or None if the country is not found.
-
-    Note:
-    - This function relies on specific functions for each country to calculate retirement age.
-    - The functions for each country should are defined separately (e.g., austria_change, belgium_change) and are located in utils/retirement folder.
-    """
-    country = row["country"]
-    country_functions_change = {
-        "Austria": austria_change,
-        "Belgium": belgium_change,
-        "Czech Republic": czech_republic_change,
-        "Denmark": denmark_change,
-        "Estonia": estonia_change,
-        "France": france_change,
-        "Germany": germany_change,
-        "Italy": italy_change,
-        "Slovenia": slovenia_change,
-        "Spain": spain_change,
-        "Switzerland": switzerland_change,
-    }
-    if country in country_functions_change:
-        return country_functions_change[country](row)
     else:
         return None
 
@@ -171,6 +100,8 @@ def share_final_preprocessing(df):
     Returns:
     - pd.DataFrame: The preprocessed DataFrame with added features and applied modifications.
     """
+    print(f"N obs initial: {len(df)}")
+
     # Drop extra age columns
     df = df.drop(columns=["age2015", "age2017", "age2020"])
 
@@ -188,6 +119,7 @@ def share_final_preprocessing(df):
     df.dropna(subset=columns_to_convert, inplace=True)
 
     print("Data types - corrected")
+    print(f"N obs after data types: {len(df)}")
 
     # Set legal retirement age
     df["retirement_age"] = df.apply(calculate_retirement_age, axis=1)
@@ -195,22 +127,38 @@ def share_final_preprocessing(df):
     # Delete those who are above the retirement age (continue to work longer)
     df = df[df["retirement_age"] > df["age"]].reset_index(drop=True)
 
+    print(f"N obs retirement age and filter to be under it: {len(df)}")
+
     # Calculate resting work horizon
     df["work_horizon"] = df["retirement_age"] - df["age"]
+    df = df[df.work_horizon <= 15].reset_index(drop=True)
 
-    # Calculate change of retirement age induced by reform
-    df["work_horizon_change_yearly"] = df.apply(calculate_horizon_change, axis=1)
-    df["work_horizon_change"] = df.apply(calculate_horizon_change1, axis=1)
-
-    grouped_df = df.groupby("mergeid")["work_horizon_change_yearly"].sum().reset_index()
-    grouped_df.rename(
-        columns={"work_horizon_change_yearly": "work_horizon_change_total"},
-        inplace=True,
+    # Change in work horizon
+    horizon2011 = (
+        df[df.year == 2011]
+        .groupby("mergeid")["work_horizon"]
+        .max()
+        .reset_index()
+        .rename(columns={"work_horizon": "work_horizon2011"})
     )
-    df = pd.merge(df, grouped_df, on="mergeid", how="left")
-    df["work_horizon_change_total"] = df["work_horizon_change_total"].where(
-        df["year"] == 2015, 0
+    horizon2015 = (
+        df[df.year == 2015]
+        .groupby("mergeid")["work_horizon"]
+        .max()
+        .reset_index()
+        .rename(columns={"work_horizon": "work_horizon2015"})
     )
+    horizon_change = horizon2011.merge(horizon2015, on="mergeid", how="left")
+    horizon_change = horizon_change.dropna().reset_index(drop=True)
+    horizon_change["work_horizon2015_expected"] = horizon_change["work_horizon2011"] - 4
+    horizon_change["work_horizon_change"] = (
+        horizon_change["work_horizon2015"] - horizon_change["work_horizon2015_expected"]
+    )
+    df = df.merge(
+        horizon_change[["mergeid", "work_horizon_change"]], on="mergeid", how="left"
+    )
+    df = df.dropna(subset="work_horizon_change").reset_index(drop=True)
+    df = df[df.work_horizon_change >= 0].reset_index(drop=True)
 
     print(
         "Retirement age, work horizon and work horizon change by reforms - calculated"
@@ -223,5 +171,6 @@ def share_final_preprocessing(df):
     )
 
     print("Longitudinal weights imputed in STATA - added")
+    print(f"N obs after weights: {len(df)}")
 
     return df

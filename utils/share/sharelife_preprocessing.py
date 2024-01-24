@@ -47,8 +47,8 @@ def sharelife_gender_country_age(df):
 
     # 1st year in country
     df["dn006_"] = df["dn006_"].fillna(df["yrbirth"])
+    df.loc[df["dn006_"] < 0, "dn006_"] = df.loc[df["dn006_"] < 0, "yrbirth"]
     df = df.rename(columns={"dn006_": "yr1country"})
-    df = df[df.yr1country > 0].reset_index(drop=True)
 
     # Transform gender to 1 for female and 0 for male
     df["gender"] = df["gender"].replace({1: 0, 2: 1})
@@ -81,13 +81,12 @@ def sharelife_add_gender_country_age(df):
     -  'mobirth' column is tranformed to numeric, gaps are filled with 1.
     """
     # 1st year in country
+    df = df.dropna(subset="yrbirth").reset_index(drop=True)
     df["dn006_"] = df["dn006_"].fillna(df["yrbirth"])
+    df.loc[(df.dn006_ == "Refusal") | (df.dn006_ == "Don't know"), "dn006_"] = df.loc[
+        (df.dn006_ == "Refusal") | (df.dn006_ == "Don't know"), "yrbirth"
+    ]
     df = df.rename(columns={"dn006_": "yr1country"})
-    df = (
-        df[(df.yr1country != "Refusal") & (df.yr1country != "Don't know")]
-        .dropna(subset="yr1country")
-        .reset_index(drop=True)
-    )
     df["yr1country"] = df["yr1country"].astype("int")
 
     # Transform gender to 1 for female and 0 for male
@@ -146,10 +145,11 @@ def calculate_education_years(waves):
 
     dn_data = pd.concat(dfs, axis=0, ignore_index=True)
 
+    mean_edu = dn_data[(dn_data.dn041_ >= 0) | (dn_data.dn041_ <= 40)]["dn041_"].mean()
+    dn_data.loc[(dn_data.dn041_ < 0) | (dn_data.dn041_ > 40), "dn041_"] = mean_edu
+
     edu_sum = dn_data.groupby("mergeid").dn041_.sum().to_frame().reset_index()
-    edu_sum = edu_sum[(edu_sum.dn041_ >= 0) & (edu_sum.dn041_ <= 40)].reset_index(
-        drop=True
-    )
+
     edu_sum = edu_sum.rename(columns={"dn041_": "yrseducation"})
 
     print("Years of education - calculated")
@@ -227,9 +227,7 @@ def sharelife_add_job(df):
         file_path = f"/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/sharew{wave}_rel8-0-0_ALL_datasets_stata/sharew{wave}_rel8-0-0_ep.dta"
         data = pd.read_stata(file_path, convert_categoricals=False)
         dfs.append(data)
-
     ep_data = pd.concat(dfs, axis=0, ignore_index=True)
-    ep_data = ep_data[ep_data["mergeid"].isin(df["mergeid"])].reset_index(drop=True)
     ep_data = ep_data[
         (ep_data.ep141d1 != "Selected")
         & (ep_data.ep141d2 != "Selected")
@@ -298,11 +296,11 @@ def contribution_years(df):
     df = df.merge(first_contribution, on="mergeid", how="left")
 
     # Delete those with less than 10 years of contributions in 2015
-    df = df[df["yrscontribution2017"] >= 12].reset_index(drop=True)
+    # df = df[(df["yrscontribution2017"] >= 12)].reset_index(drop=True)
 
     # Delete those who started work before the age of 10
+    df["yr1contribution"] = df["yr1contribution"].fillna(df["yrbirth"] + 20)
     df["yr1contribution"] = df["yr1contribution"].astype("int")
-    df = df[df["yr1contribution"] >= df["yrbirth"].astype(int) + 10]
 
     print("Years of contribution, 1st year of contribution - calculated")
     print("Those worked less than 10 years / started work before age of 10 - deleted")
@@ -332,22 +330,32 @@ def sharelife_preprocessing(df):
     # Choose Sharelife part
     df = df[df.mn103_ == 1].reset_index(drop=True)
 
+    print(f"Initial n obs: {len(df)}")
+
     # Preprocess gender, country, and age
     df = sharelife_gender_country_age(df)
 
+    print(f"N obs after processing gender and age: {len(df)}")
+
     # Calculate education years
-    waves = [1, 2, 4, 5, 6, 7]
+    waves = [1, 2, 4, 5, 6]
     edu_sum = calculate_education_years(waves)
 
     # Merge education data
     df = df.merge(edu_sum, on="mergeid", how="left")
-    df = df.dropna(subset="yrseducation").reset_index(drop=True)
+    df["yrseducation"] = df["yrseducation"].fillna(df["yrseducation"].mean())
+
+    print(f"N obs after processing education years: {len(df)}")
 
     # Preprocess job changes
     df = sharelife_job(df)
 
+    print(f"N obs after isco job changes: {len(df)}")
+
     # Calculate year of contribution
     df = contribution_years(df)
+
+    print(f"N obs after contribution years: {len(df)}")
 
     # Choose columns to keep
     df = df[
@@ -389,14 +397,19 @@ def sharelife_add_preprocessing(df, sharelife_data):
     - Contribution years are calculated using 'contribution_years'.
     - The resulting DataFrame contains selected columns.
     """
+    print(f"N obs initial: {len(df)}")
     # Leave only those with isco codes
     df = df.dropna(subset="ep616isco").reset_index(drop=True)
     df = df[
         (df.ep616isco != "Don't know") & (df.ep616isco != "Not yet coded")
     ].reset_index(drop=True)
 
+    print(f"N obs dropping missing isco: {len(df)}")
+
     # Leave only those not already present in Sharelife
     df = df[~df["mergeid"].isin(sharelife_data["mergeid"])].reset_index(drop=True)
+
+    print(f"N obs after drop already present in Sharelife: {len(df)}")
 
     # Leave only first wave with isco code for each individual
     df = df.loc[df.groupby("mergeid")["wave"].idxmin()].reset_index(drop=True)
@@ -404,19 +417,26 @@ def sharelife_add_preprocessing(df, sharelife_data):
     # Preprocess gender, country, and age
     df = sharelife_add_gender_country_age(df)
 
-    # Calculate education years
-    waves = [1, 2, 4, 5, 6, 7]
-    edu_sum = calculate_education_years(waves)
+    print(f"N obs after gender and age: {len(df)}")
 
+    # Calculate education years
+    waves = [1, 2, 4, 5, 6]
+    edu_sum = calculate_education_years(waves)
     # Merge education data
     df = df.merge(edu_sum, on="mergeid", how="left")
-    df = df.dropna(subset="yrseducation").reset_index(drop=True)
+    df["yrseducation"] = df["yrseducation"].fillna(df["yrseducation"].mean())
+
+    print(f"N obs after education: {len(df)}")
 
     # Preprocess job changes
     df = sharelife_add_job(df)
 
+    print(f"N obs after job and isco: {len(df)}")
+
     # Calculate year of contribution
     df = contribution_years(df)
+
+    print(f"N obs after contribution years: {len(df)}")
 
     # Choose columns to keep
     df = df[

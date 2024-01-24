@@ -42,6 +42,7 @@ def ewcs_preprocessing(df, meta):
         "Italy",
         "Slovenia",
         "Spain",
+        "Sweden",
         "Switzerland",
     ]
     df = df[df["countid"].isin(countries)].reset_index(drop=True)

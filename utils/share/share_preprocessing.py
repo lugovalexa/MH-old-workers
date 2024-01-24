@@ -16,8 +16,6 @@ def calculate_age(row):
     """
     if not pd.isnull(row["age2011"]):
         return row["age2011"] + (row["year"] - 2011)
-    elif not pd.isnull(row["age2013"]):
-        return row["age2013"] - (2013 - row["year"])
     elif not pd.isnull(row["age2015"]):
         return row["age2015"] - (2015 - row["year"])
     else:
@@ -26,7 +24,7 @@ def calculate_age(row):
 
 def number_of_children(df):
     """
-    Calculate the number of children and grandchildren for each individual in the DataFrame for the years 2011, 2013, and 2015.
+    Calculate the number of children and grandchildren for each individual in the DataFrame for the years 2011 and 2015.
 
     Parameters:
     - df (pd.DataFrame): The input DataFrame containing information about individuals and their children/grandchildren.
@@ -36,8 +34,7 @@ def number_of_children(df):
     """
     # Calculate number of children
     # Handle missing values
-    df = df[(df.ch001_ != "Refusal")].reset_index(drop=True)
-    df["ch001_"] = df["ch001_"].replace({"Don't know": 0})
+    df["ch001_"] = df["ch001_"].replace({"Don't know": 0, "Refusal": 0})
 
     # Calculate number of children by household for each year
     children = (
@@ -52,8 +49,7 @@ def number_of_children(df):
     df = df.merge(children, on=["hhid", "year"], how="left")
 
     # Calculate number of grandchildren - the same process
-    df = df[(df.ch021_ != "Refusal")].reset_index(drop=True)
-    df["ch021_"] = df["ch021_"].replace({"Don't know": 0})
+    df["ch021_"] = df["ch021_"].replace({"Don't know": 0, "Refusal": 0})
 
     grandchildren = (
         df.groupby(["hhid", "year"])["ch021_"]
@@ -94,7 +90,7 @@ def industry(df):
     # Merge with main df and drop missing values
     df = df.merge(last_industry, on="mergeid", how="left")
     df["industry"] = df["industry"].replace(["Don't know", "Refusal"], np.nan)
-    df = df.dropna(subset="industry").reset_index(drop=True)
+    df["industry"] = df["industry"].fillna("Other")
 
     return df
 
@@ -110,14 +106,14 @@ def finance(df):
     - pd.DataFrame: The DataFrame with added columns representing financial information.
 
     Note:
-    - The function reads household income data for waves 4, 5, and 6 from specific file paths.
+    - The function reads household income data for waves 4 and 6 from specific file paths.
     - It merges the household income information based on 'mergeid' and 'wave'.
     - Investments and life insurance columns are converted to binary (Yes: 1, No/Refusal/Don't know: 0).
     - All types of investments are aggregated into a single column to indicate 1 - has investments and 0 - no investments.
     - The resulting DataFrame includes additional columns: 'thinc' (household income), 'thinc2' (household income alternative), 'investment' (1 if present), and 'life_insurance' (1 if present).
     """
     # Add household income
-    ws = [4, 5, 6]
+    ws = [4, 6]
     dfs = []
 
     for wave in ws:
@@ -125,11 +121,11 @@ def finance(df):
         data = pd.read_stata(file_path, convert_categoricals=False)
         data["wave"] = wave
         data = data.rename(columns={f"hhid{wave}": "hhid"})
-        data = data.groupby(["hhid", "wave"])[["thinc", "thinc2"]].max().reset_index()
+        data = data.groupby(["hhid", "wave"])["thinc2"].max().reset_index()
+        data = data.rename(columns={"thinc2": "thinc"})
         dfs.append(data)
 
     data = pd.concat(dfs, axis=0, ignore_index=True)
-    data["thinc"] = np.where(data["thinc"] < 0, data["thinc2"], data["thinc"])
 
     df = df.merge(data, on=["hhid", "wave"], how="left")
 
@@ -184,25 +180,27 @@ def health(df):
     df["sphus"] = df["sphus"].replace(["Don't know", "Refusal"], np.nan)
     df = df.dropna(subset="sphus").reset_index(drop=True)
 
+    print(f"N obs after dropping missing sphus:{len(df)}")
+
     df["sphus2"] = df["sphus2"].replace(
         {"Less than very good": 0, "Very good/excellent": 1}
     )
     # Add number of chronic diseases
-    df["chronic"] = (
-        df["chronicw4"].combine_first(df["chronicw5"]).combine_first(df["chronicw6c"])
-    )
-    df["chronic2"] = (
-        df["chronic2w4"].combine_first(df["chronic2w5"]).combine_first(df["chronic2w6"])
-    )
+    df["chronic"] = df["chronicw4"].combine_first(df["chronicw6c"])
+    df["chronic2"] = df["chronic2w4"].combine_first(df["chronic2w6"])
 
-    df["chronic"] = df["chronic"].replace(["Don't know", "Refusal"], np.nan)
+    df["chronic"] = df["chronic"].replace(["Don't know", "Refusal"], 0)
     df = df.dropna(subset="chronic").reset_index(drop=True)
+
+    print(f"N obs after dropping missing chronic:{len(df)}")
 
     df["chronic2"] = df["chronic2"].replace(
         {"Less than 2 diseases": 0, "2+ chronic diseases": 1}
     )
     # Add Euro-D scale score for mental health
     df = df.dropna(subset=["eurod"]).reset_index(drop=True)
+
+    print(f"N obs after dropping missing eurod:{len(df)}")
     # Transform to numeric
     df["eurod"] = df["eurod"].replace({"Not depressed": 0, "Very depressed": 12})
     df["eurodcat"] = df["eurodcat"].replace({"Yes": 1, "No": 0})
@@ -310,7 +308,7 @@ def share_preprocessing(df, data_with_isco):
     print("Those without ISCO codes - deleted")
     print(f"N obs with ISCO: {len(df)}")
     # Add year
-    wave_to_year = {4: 2011, 5: 2013, 6: 2015}
+    wave_to_year = {4: 2011, 6: 2015}
     df["year"] = df["wave"].map(wave_to_year).astype(int)
 
     # Calculate current age
@@ -329,16 +327,21 @@ def share_preprocessing(df, data_with_isco):
     ].reset_index(drop=True)
     print(f"N obs after leaving only employed: {len(df)}")
     # Delete those eligible to disability or other special state pensions
-    df = df[(df.ep071dno == "Selected") | (df.ep671dno == "Selected")].reset_index(
-        drop=True
-    )
-    print(f"N obs after deleting special conditions pension: {len(df)}")
+    # df = df[(df.ep071dno == "Selected") | (df.ep671dno == "Selected")].reset_index(
+    #    drop=True
+    # )
+    # print(f"N obs after deleting special conditions pension: {len(df)}")
     # print("Currently not working and eligible to special pensions - deleted")
     # Add job status
     df["ep009_"] = (
         df["ep009_"]
-        .replace({"Don't know": "Employee", "Refusal": "Employee"})
-        .fillna("Employee")
+        .replace(
+            {
+                "Don't know": "Private sector employee",
+                "Refusal": "Private sector employee",
+            }
+        )
+        .fillna("Private sector employee")
     )
     df = df.rename(columns={"ep009_": "job_status"})
 
@@ -358,6 +361,7 @@ def share_preprocessing(df, data_with_isco):
     df = health(df)
 
     print("Physical and mental health indicators - added")
+    print(f"N obs after health: {len(df)}")
 
     # Choose columns
     df = df[
@@ -373,7 +377,6 @@ def share_preprocessing(df, data_with_isco):
             "job_status",
             "industry",
             "thinc",
-            "thinc2",
             "investment",
             "life_insurance",
             "sphus",
@@ -386,5 +389,4 @@ def share_preprocessing(df, data_with_isco):
             "motivation_lack",
         ]
     ]
-    print(f"N obs after handling health: {len(df)}")
     return df

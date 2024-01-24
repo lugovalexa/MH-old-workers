@@ -43,7 +43,7 @@ def import_share_stata(
     return df
 
 
-def import_share_stata1(file_names, convert_categoricals=False, waves=[4, 5, 6]):
+def import_share_stata1(file_names, convert_categoricals=False, waves=[4, 6]):
     datasets_folder = []
 
     for wave in waves:

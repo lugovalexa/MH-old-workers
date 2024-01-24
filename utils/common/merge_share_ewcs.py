@@ -7,8 +7,6 @@ def merge_share_ewcs(
     output_csv,
     not_country_wise=False,
     convert_to_3_digits=False,
-    exclude_wave_5=False,
-    balanced=False,
 ):
     """
     Merge two datasets (SHARE and EWCS) based on specified conditions.
@@ -21,7 +19,7 @@ def merge_share_ewcs(
     - balanced (bool, optional): If True, create a balanced panel by keeping only common IDs between waves.
 
     Note:
-    The function reads two CSV files, 'share_clean_w456.csv' and either 'work_quality_indexes_year_country_3digits.csv'
+    The function reads two CSV files, 'share_clean_w46.csv' and either 'work_quality_indexes_year_country_3digits.csv'
     or 'work_quality_indexes_year_country_4digits.csv', depending on the `convert_to_3_digits` parameter.
     The merged dataset is saved to the specified `output_csv` file.
 
@@ -34,7 +32,7 @@ def merge_share_ewcs(
     )
 
     # Read input CSVs
-    df = pd.read_csv("share_clean_w456.csv")
+    df = pd.read_csv("share_clean_w46.csv")
     if convert_to_3_digits:
         indexes = pd.read_csv("work_quality_indexes_year_country_3digits.csv")
     else:
@@ -56,35 +54,13 @@ def merge_share_ewcs(
             lambda x: int(str(x)[:-1]) if x >= 1000 else x
         )
 
-    # Optional: exclude wave 5
-    if exclude_wave_5:
-        df = df[df.wave != 5].reset_index(drop=True)
-
     # Merge on specified columns
     if not_country_wise:
         df = df.merge(indexes, on=["year", "isco"], how="left")
     else:
         df = df.merge(indexes, on=["year", "country", "isco"], how="left")
 
-    df = df.dropna().reset_index(drop=True)
-
-    # Optional: balanced panel
-    if balanced:
-        if exclude_wave_5:
-            unique_mergeid_w4 = set(df[df.wave == 4]["mergeid"].unique())
-            unique_mergeid_w6 = set(df[df.wave == 6]["mergeid"].unique())
-            intersection_ids = unique_mergeid_w4.intersection(unique_mergeid_w6)
-            df = df[df["mergeid"].isin(intersection_ids)].reset_index(drop=True)
-        else:
-            unique_mergeid_w4 = set(df[df.wave == 4]["mergeid"].unique())
-            unique_mergeid_w5 = set(df[df.wave == 5]["mergeid"].unique())
-            unique_mergeid_w6 = set(df[df.wave == 6]["mergeid"].unique())
-            intersection_ids = unique_mergeid_w4.intersection(
-                unique_mergeid_w5
-            ).intersection(unique_mergeid_w6)
-            df = df[df["mergeid"].isin(intersection_ids)].reset_index(drop=True)
-
-    df = df[df.country != "Germany"].reset_index(drop=True)
+    df = df.dropna(subset="jqi_sum").reset_index(drop=True)
 
     # Save to output CSV
     df.to_csv(output_csv, index=False)
