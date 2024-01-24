@@ -18,11 +18,12 @@ library(glmnet)
 library(MASS)
 library(texreg)
 library(sandwich)
+library(fixest)
 ```
 
 ### Load data
 ```{r}
-data <- read.csv("/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/4digits_w46_year_balanced.csv")
+data <- read.csv("/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/4digits_year.csv")
 ```
 
 ### Create some additional variables
@@ -32,21 +33,22 @@ data <- read.csv("/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/da
 data$age_squared <- data$age^2
 # income log
 data$thinc_log <- log(data$thinc + 1)
-data$thinc2_log <- log(data$thinc2 + 1)
-# children and grandchildren together
+# eurod log
+data$eurod_log <- log(data$eurod + 1e-8)
 
 # work horizon change binary
-data$work_horizon_change_bin0 <- ifelse(data$work_horizon_change_total > 0, 1, 0)
-data$work_horizon_change_bin1 <- ifelse(data$work_horizon_change_total > 1, 1, 0)
+data$work_horizon_change_bin0 <- ifelse(data$work_horizon_change > 0, 1, 0)
+data$work_horizon_change_bin1 <- ifelse(data$work_horizon_change > 1, 1, 0)
+data$work_horizon_change_bin2 <- ifelse(data$work_horizon_change >= 2, 1, 0)
 # work horizon change categorical
-data$work_horizon_change_cat <- cut(data$work_horizon_change_total, breaks = c(-Inf, 0, 1, 2, Inf), labels = c("0", "<1", "<2", "2+"), include.lowest = TRUE)
+data$work_horizon_change_cat <- cut(data$work_horizon_change, breaks = c(-Inf, 0, 1, 2, Inf), labels = c("0", "<1", "<2", "2+"), include.lowest = TRUE)
 
 # DID variables
 # post treatment period
 data$time = ifelse(data$year >= 2015, 1, 0)
 # treatment group if work_horizon_change > 0
 mergeids_to_treat <- data %>%
-  filter(time == 1 & work_horizon_change_total > 0) %>%
+  filter(time == 1 & work_horizon_change > 0) %>%
   distinct(mergeid)
 data <- data %>%
   mutate(treated = ifelse(mergeid %in% mergeids_to_treat$mergeid, 1, 0))
@@ -61,11 +63,11 @@ data <- data %>%
   filter(!mergeid %in% rows_to_remove$mergeid)
 
 # Determine cell fol fixed effects/ cluster standard errors
-data$cell <- paste(data$country, data$gender, data$isco, sep = "_")
+data$cell <- paste(data$country, data$gender, sep = "_")
 data2015 <- data %>%
   filter(time == 1) %>%
-  dplyr::select(mergeid, country, work_horizon_change_total)
-data2015$cell1 <- paste(data2015$country, data2015$work_horizon_change_total, sep = "_")
+  dplyr::select(mergeid, country, work_horizon_change)
+data2015$cell1 <- paste(data2015$country, data2015$work_horizon_change, sep = "_")
 data <- data %>%
  left_join(data2015 %>% dplyr::select(mergeid,cell1), by = "mergeid")
 cells_to_remove <- data %>%
@@ -95,6 +97,24 @@ Number of treated individuals
 sum(data$did)
 ```
 
+```{r}
+fit1 <- plm(eurod ~ did,
+                       data=subset(data,gender==0), weights=my_wgt, index=c("mergeid","year"),method="within",effect="twoways")
+summary(fit1, robust = "vcovHC")
+```
+```{r}
+fit <- feols(eurod ~ did | cell1, data = subset(data,gender==0))
+
+summary(fit, robust = "gee")
+```
+
+```{r}
+fit <- fepois(eurod ~ time:work_horizon_change_bin1 | cell1, data = subset(data,gender==0))
+
+summary(fit, robust = "gee")
+```
+
+
 # DID models
 ```{r}
 # Calculate the difference in means between treatment and control in the POST-treatment period
@@ -116,45 +136,18 @@ diff_in_diff <- post_difference - pre_difference
 diff_in_diff
 ```
 
-```{r}
-library(pscl)
-
-model_negbinom <- zeroinfl(eurod ~ did + time + partnerinhh + nb_children + nb_grandchildren + yrseducation + sphus + chronic
-               + life_insurance + investment + thinc2_log + work_horizon + jqi_sum + factor(cell1), data = subset(data, gender==1),
-               dist = "negbin", link = "logit", weights=my_wgt)
-```
 
 ```{r}
-mod <- glm(eurodcat ~ age #+ time + partnerinhh + nb_children + nb_grandchildren + yrseducation + sphus + chronic
-               #+ life_insurance + investment + thinc2_log + work_horizon + jqi_sum + factor(cell1)
-               ,data = subset(data, gender==1), weights=my_wgt, family="binomial")
-summary(mod)
+fit1 <- glm(eurod ~ time + treated + did,
+                       data=subset(data,gender==0), weights=my_wgt, family="quasipoisson")
+summary(fit1, robust = "vcovHC")
 ```
 
 
-EuroD - count data with quasi-poisson distribution (quasi as overdisperion (variance gretaer then mean))
-
 ```{r}
-# quasipoisson justification
-set.seed(1234)
-theoretic_count <-rpois(2340,1.96)
-
-# theoretic distribution
-tc_df <-data.frame(theoretic_count)
-
-# comparison with effective values
-library(ggplot2)
-ggplot(dataf,aes(eurod))+
-   geom_bar(fill="#1E90FF")+
-   geom_bar(data=tc_df, aes(theoretic_count,fill="#1E90FF", alpha=0.5))+
-   theme_classic()+
-   theme(legend.position="none")
-```
-
-```{r}
-fit1 <- glm(eurod ~  did,
-                       data  = data, weights=my_wgt, family = "quasipoisson")
-summary(fit1, vcov = vcovHC, type = "HC1")
+fit1 <- lm(eurod_log ~ did + time + treated,
+                       data=data, weights=my_wgt)
+summary(fit1, robust = "vcovHC")
 ```
 
 ```{r}
@@ -163,45 +156,40 @@ robust_se <- sqrt(diag(clustered_se)) # Obtain robust standard errors
 
 coeftest(fit1, vcov. = clustered_se)
 ```
+
 ```{r}
-fit2 <- glm(eurodcat ~  time + did + as.factor(cell1),
-                       data  = data,  weights=my_wgt, family = "binomial")
-summary(fit2, vcov = vcovHC, type = "HC1")
+fit2 <- lm(eurod_log  ~ did + treated + time + as.factor(cell),
+                       data=subset(data,gender==0),  weights=my_wgt)
+summary(fit2, robust = "vcovHC")
 ```
 
 
 ```{r}
-fit2 <- glm(eurod ~  time + did + as.factor(cell1),
-                       data  = data,  weights=my_wgt, family = "quasipoisson")
-summary(fit2, vcov = vcovHC, type = "HC1")
-```
-
-```{r}
-clustered_se <- vcovHC(fit2, type = "HC1", cluster = "cell1") # Cluster standard errors at the country level
+clustered_se <- vcovHC(fit2, type = "HC1", cluster = "cell") # Cluster standard errors at the country level
 robust_se <- sqrt(diag(clustered_se)) # Obtain robust standard errors
 
 coeftest(fit2, vcov. = clustered_se)
 ```
 
 ```{r}
-fit3 <- glm(eurod ~ did + time + gender + partnerinhh + nb_children + nb_grandchildren + yrseducation + sphus + chronic
-               + life_insurance + investment + thinc2_log + work_horizon + jqi_sum + as.factor(cell1) + as.factor(industry),
-                       data=data, weights=my_wgt, family="quasipoisson")
-summary(fit3, vcov = vcovHC, type = "HC1", clustered_se="cell1")
+fit3 <- lm(eurod_log ~ did + time + treated + partnerinhh + nb_children + nb_grandchildren + yrseducation + sphus + chronic
+               + life_insurance + investment + thinc_log + work_horizon + jqi_sum + as.factor(cell) + as.factor(industry),
+                       data=subset(data,gender==0), weights=my_wgt)
+summary(fit3, robust = "vcovHC")
 ```
 
 ```{r}
-clustered_se <- vcovHC(fit3, type = "HC1", cluster = "cell1") # Cluster standard errors at the country level
+clustered_se <- vcovHC(fit3, type = "HC1", cluster = "cell") # Cluster standard errors at the country level
 robust_se <- sqrt(diag(clustered_se)) # Obtain robust standard errors
 
 coeftest(fit3, vcov. = clustered_se)
 ```
 
 ```{r}
-fit4 <- glm(eurod ~ did + time+ partnerinhh + nb_children + nb_grandchildren + yrseducation + sphus + chronic
-               + life_insurance + investment + thinc2_log + work_horizon + jqi_physical_environment + jqi_social_environment
-               + jqi_intensity + jqi_prospects + jqi_working_time_quality + as.factor(cell1) + as.factor(industry),
-                       data=subset(data,gender==1), weights=my_wgt, family="quasipoisson")
+fit4 <- glm(eurod ~ did + time + treated + partnerinhh + nb_children + nb_grandchildren + yrseducation + sphus + chronic
+               + life_insurance + investment + thinc_log + work_horizon + jqi_physical_environment + jqi_social_environment
+               + jqi_intensity + jqi_prospects + jqi_working_time_quality + as.factor(cell) + as.factor(industry),
+                       data=subset(data,gender==0), weights=my_wgt, family="quasipoisson")
 
 #summary(fe_mod2)$coefficients['work_horizon_change_total',]
 summary(fit4, robust = "vcovHC")
@@ -233,14 +221,14 @@ anova(fit4, test = "F")
 # Tests
 ```{r}
 par(mfrow = c(2, 2))
-plot(fit4)
+plot(fit2)
 ```
 
 Normality of residuals - DID approach is robust to this
 
 Breusch-Pagan test for heteroscedasticity
 ```{r}
-bptest(fit4) #small p-value - not normal - heteroscedasticity present
+bptest(fit2) #small p-value - not normal - heteroscedasticity present
 ```
 
 ```{r}
@@ -252,17 +240,81 @@ vif(fit4)
 ```{r}
 interaction_formula <- paste(interaction_terms_colnames, collapse = " + ")
 full_formula <- reformulate(c("did", "time", "partnerinhh", "nb_children", "nb_grandchildren", "yrseducation", "sphus", "chronic",
-               "life_insurance", "investment", "thinc2_log", "work_horizon", "jqi_physical_environment", "jqi_social_environment",
-               "jqi_intensity", "jqi_prospects", "jqi_working_time_quality", "as.factor(cell1)", "as.factor(industry)"),response="eurod")
+               "life_insurance", "investment", "thinc_log", "work_horizon", "jqi_physical_environment", "jqi_social_environment",
+               "jqi_intensity", "jqi_prospects", "jqi_working_time_quality", "as.factor(cell)", "as.factor(industry)"),response="eurod_log")
 noind_formula <- reformulate(c("did", "time", "partnerinhh", "nb_children", "nb_grandchildren", "yrseducation", "sphus", "chronic",
-               "life_insurance", "investment", "thinc2_log", "work_horizon", "jqi_sum", "as.factor(cell1)", "as.factor(industry)"),response="eurod")
+               "life_insurance", "investment", "thinc_log", "work_horizon", "jqi_sum", "as.factor(cell)", "as.factor(industry)"),response="eurod_log")
+```
+
+```{r}
+full_formula <- reformulate(c("did", "time", "treated", "as.factor(cell)"),response="eurod_log")
+noind_formula <- reformulate(c("did", "time", "treated", "as.factor(cell)"),response="eurod_log")
+```
+
+
+```{r}
+# DID full dataset panel fixed effects
+did_full = lm(eurod_log ~ did + time + gender + partnerinhh + nb_children + nb_grandchildren + yrseducation + sphus + chronic
+               + life_insurance + investment + thinc_log + work_horizon + jqi_physical_environment + jqi_social_environment
+               + jqi_intensity + jqi_prospects + jqi_working_time_quality + as.factor(cell) + as.factor(industry),
+               data = data, weights = my_wgt)
+
+# DID female/male
+did_female = lm(full_formula, data = subset(data, gender == 1), weights = my_wgt)
+did_male = lm(full_formula, data = subset(data, gender == 0), weights = my_wgt)
+
+# DID female/male jqi_skills_discretion above/below mean
+did_female_skills_high = lm(noind_formula, data = subset(data, gender == 1 & jqi_skills_discretion >= median(jqi_skills_discretion)), weights = my_wgt)
+did_female_skills_low= lm(noind_formula, data = subset(data, gender == 1 & jqi_skills_discretion < median(jqi_skills_discretion)), weights = my_wgt)
+did_male_skills_high = lm(noind_formula, data = subset(data, gender == 0 & jqi_skills_discretion >= median(jqi_skills_discretion)), weights = my_wgt)
+did_male_skills_low = lm(noind_formula, data = subset(data, gender == 0 & jqi_skills_discretion < median(jqi_skills_discretion)), weights = my_wgt)
+
+# DID female/male jqi_physical_environment above/below mean
+did_female_physical_high = lm(noind_formula, data = subset(data, gender == 1 & jqi_physical_environment >= median(jqi_physical_environment)), weights = my_wgt)
+did_female_physical_low = lm(noind_formula, data = subset(data, gender == 1 & jqi_physical_environment < median(jqi_physical_environment)), weights = my_wgt)
+did_male_physical_high = lm(noind_formula, data = subset(data, gender == 0 & jqi_physical_environment >= median(jqi_physical_environment)), weights = my_wgt)
+did_male_physical_low = lm(noind_formula, data = subset(data, gender == 0 & jqi_physical_environment < median(jqi_physical_environment)), weights = my_wgt)
+
+# DID female/male jqi_social_environment above/below mean
+did_female_social_high = lm(noind_formula, data = subset(data, gender == 1 & jqi_social_environment >= median(jqi_social_environment)), weights = my_wgt)
+did_female_social_low = lm(noind_formula, data = subset(data, gender == 1 & jqi_social_environment < median(jqi_social_environment)), weights = my_wgt)
+did_male_social_high = lm(noind_formula, data = subset(data, gender == 0 & jqi_social_environment >= median(jqi_social_environment)), weights = my_wgt)
+did_male_social_low = lm(noind_formula, data = subset(data, gender == 0 & jqi_social_environment < median(jqi_social_environment)), weights = my_wgt)
+
+# DID female/male jqi_working_time_quality above/below mean
+did_female_time_high = lm(noind_formula, data = subset(data, gender == 1 & jqi_working_time_quality >= median(jqi_working_time_quality)), weights = my_wgt)
+did_female_time_low = lm(noind_formula, data = subset(data, gender == 1 & jqi_working_time_quality < median(jqi_working_time_quality)), weights = my_wgt)
+did_male_time_high = lm(noind_formula, data = subset(data, gender == 0 & jqi_working_time_quality >= median(jqi_working_time_quality)), weights = my_wgt)
+did_male_time_low = lm(noind_formula, data = subset(data, gender == 0 & jqi_working_time_quality < median(jqi_working_time_quality)), weights = my_wgt)
+
+# DID female/male jqi_prospects above/below mean
+did_female_prospects_high = lm(noind_formula, data = subset(data, gender == 1 & jqi_prospects >= median(jqi_prospects)), weights = my_wgt)
+did_female_prospects_low = lm(noind_formula, data = subset(data, gender == 1 & jqi_prospects < median(jqi_prospects)), weights = my_wgt)
+did_male_prospects_high = lm(noind_formula, data = subset(data, gender == 0 & jqi_prospects >= median(jqi_prospects)), weights = my_wgt)
+did_male_prospects_low = lm(noind_formula, data = subset(data, gender == 0 & jqi_prospects < median(jqi_prospects)), weights = my_wgt)
+
+# DID female/male jqi_intensity above/below mean
+did_female_intensity_high = lm(noind_formula, data = subset(data, gender == 1 & jqi_intensity >= median(jqi_intensity)), weights = my_wgt)
+did_female_intensity_low = lm(noind_formula, data = subset(data, gender == 1 & jqi_intensity < median(jqi_intensity)), weights = my_wgt)
+did_male_intensity_high = lm(noind_formula, data = subset(data, gender == 0 & jqi_intensity >= median(jqi_intensity)), weights = my_wgt)
+did_male_intensity_low = lm(noind_formula, data = subset(data, gender == 0 & jqi_intensity < median(jqi_intensity)), weights = my_wgt)
+```
+
+```{r}
+summary(did_male)
+```
+
+```{r}
+interaction_formula <- paste(interaction_terms_colnames, collapse = " + ")
+full_formula <- reformulate(c("did", "time", "treated", "as.factor(cell)"),response="eurod")
+noind_formula <- reformulate(c("did", "time", "treated", "as.factor(cell)"),response="eurod")
 ```
 
 
 ```{r}
 # DID full dataset panel fixed effects
 did_full = glm(eurod ~ did + time + gender + partnerinhh + nb_children + nb_grandchildren + yrseducation + sphus + chronic
-               + life_insurance + investment + thinc2_log + work_horizon + jqi_physical_environment + jqi_social_environment
+               + life_insurance + investment + thinc_log + work_horizon + jqi_physical_environment + jqi_social_environment
                + jqi_intensity + jqi_prospects + jqi_working_time_quality + as.factor(cell1) + as.factor(industry),
                data = data, weights = my_wgt, family="quasipoisson")
 
@@ -308,7 +360,7 @@ did_male_intensity_low = glm(noind_formula, data = subset(data, gender == 0 & jq
 ```
 
 ```{r}
-summary(did_female_intensity_low, robust = "vcovHC")
+summary(did_female_physical_low, robust = "vcovHC")
 ```
 
 ```{r}
@@ -359,7 +411,7 @@ knitr::kable(psych::describe(data_summary, skew = FALSE), digits = c(1,4,2,2,1,1
 
 ### Cross table and different tests
 ```{r}
-crosstable(subset(data, time == 0), c(eurod, eurodcat), by=treated, test=TRUE) %>%
+crosstable(subset(data, time == 1), c(eurod, eurodcat), by=treated, test=TRUE) %>%
   as_flextable(fontsizes = list(body = 8, subheaders = 8, header = 8),)
 ```
 
