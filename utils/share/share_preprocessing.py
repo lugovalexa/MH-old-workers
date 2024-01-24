@@ -301,23 +301,24 @@ def share_preprocessing(df, data_with_isco):
 
     """
     # Leave only also those with isco codes
+    print(f"Initial n obs: {len(df)}")
     unique_mergeid_share = set(df["mergeid"].unique())
     unique_mergeid_isco = set(data_with_isco["mergeid"].unique())
     intersection_ids = unique_mergeid_share.intersection(unique_mergeid_isco)
     df = df[df["mergeid"].isin(intersection_ids)].reset_index(drop=True)
 
     print("Those without ISCO codes - deleted")
-
+    print(f"N obs with ISCO: {len(df)}")
     # Add year
     wave_to_year = {4: 2011, 5: 2013, 6: 2015}
     df["year"] = df["wave"].map(wave_to_year).astype(int)
 
     # Calculate current age
     df["age"] = df.apply(calculate_age, axis=1)
-
+    print(f"N obs after age calculation: {len(df)}")
     # Calculate number of children and grandchildren
     df = number_of_children(df)
-
+    print(f"N obs after defining number of children: {len(df)}")
     # Indicate if lives with a partner
     df["partnerinhh"] = df["partnerinhh"].replace({"Yes": 1, "No": 0})
 
@@ -326,12 +327,12 @@ def share_preprocessing(df, data_with_isco):
     df = df[
         df.ep005_ == "Employed or self-employed (including working for family business)"
     ].reset_index(drop=True)
-
+    print(f"N obs after leaving only employed: {len(df)}")
     # Delete those eligible to disability or other special state pensions
-    # df = df[(df.ep071dno == "Selected") | (df.ep671dno == "Selected")].reset_index(
-    #    drop=True
-    # )
-
+    df = df[(df.ep071dno == "Selected") | (df.ep671dno == "Selected")].reset_index(
+        drop=True
+    )
+    print(f"N obs after deleting special conditions pension: {len(df)}")
     # print("Currently not working and eligible to special pensions - deleted")
     # Add job status
     df["ep009_"] = (
@@ -343,11 +344,13 @@ def share_preprocessing(df, data_with_isco):
 
     # Add industry of employment
     df = industry(df)
+    print(f"N obs after defining industry: {len(df)}")
 
     print("Job status, industry of employment - added")
 
     # Add household income, investments, life insurance
     df = finance(df)
+    print(f"N obs after defining finance: {len(df)}")
 
     print("Household income, investments, life insurance - added")
 
@@ -383,4 +386,5 @@ def share_preprocessing(df, data_with_isco):
             "motivation_lack",
         ]
     ]
+    print(f"N obs after handling health: {len(df)}")
     return df
