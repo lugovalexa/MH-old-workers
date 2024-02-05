@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def estonia_age(row):
     # Male
     if row["gender"] == "Male":
@@ -20,3 +23,12 @@ def estonia_age(row):
                 return 62.5
             else:
                 return row["age"] + 15 - row["yrscontribution"]
+
+
+def estonia_age_early(row):
+    if (row["age"] + 15 - row["yrscontribution"] < row["retirement_age"]) and (
+        row["age"] + 15 - row["yrscontribution"] >= row["retirement_age"] - 3
+    ):
+        return row["age"] + 15 - row["yrscontribution"]
+    else:
+        return np.nan

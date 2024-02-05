@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def france_age(row):
     # Wave 4
     if row["wave"] == 4:
@@ -94,3 +97,7 @@ def france_age(row):
                 return 67
             else:
                 return row["age"] + 41.5 - row["yrscontribution"]
+
+
+def france_age_early(row):
+    return np.nan

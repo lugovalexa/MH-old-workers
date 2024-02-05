@@ -105,13 +105,14 @@ summary(fit1, robust = "vcovHC")
 ```{r}
 fit <- feols(eurod ~ did | cell1, data = subset(data,gender==0))
 
-summary(fit, robust = "gee")
+summary(fit, vcov = "twoway")
 ```
 
-```{r}
-fit <- fepois(eurod ~ time:work_horizon_change_bin1 | cell1, data = subset(data,gender==0))
 
-summary(fit, robust = "gee")
+```{r}
+fit <- fepois(eurod ~ time*work_horizon_change_bin0 | cell, data = subset(data,gender==0))
+
+summary(fit, vcov = "twoway")
 ```
 
 

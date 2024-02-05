@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def czech_republic_age(row):
     # Male
     if row["gender"] == "Male":
@@ -128,3 +131,40 @@ def czech_republic_age(row):
                     return 62.83 + 5
                 else:
                     return row["age"] + 20 - row["yrscontribution"]
+
+
+def czech_republic_age_early(row):
+    # Wave 4
+    if row["wave"] == 4:
+        if (row["age"] + 27 - row["yrscontribution"] < row["retirement_age"]) and (
+            row["age"] + 27 - row["yrscontribution"] >= row["retirement_age"] - 3
+        ):
+            return row["age"] + 27 - row["yrscontribution"]
+        else:
+            return np.nan
+    # Wave 6
+    else:
+        if row["retirement_age"] < 63:
+            if (
+                (row["age"] + 31 - row["yrscontribution"] < row["retirement_age"])
+                and (
+                    row["age"] + 31 - row["yrscontribution"]
+                    >= row["retirement_age"] - 3
+                )
+                and (row["age"] + 31 - row["yrscontribution"] >= 60)
+            ):
+                return row["age"] + 31 - row["yrscontribution"]
+            else:
+                return np.nan
+        else:
+            if (
+                (row["age"] + 31 - row["yrscontribution"] < row["retirement_age"])
+                and (
+                    row["age"] + 31 - row["yrscontribution"]
+                    >= row["retirement_age"] - 5
+                )
+                and (row["age"] + 31 - row["yrscontribution"] >= 60)
+            ):
+                return row["age"] + 31 - row["yrscontribution"]
+            else:
+                return np.nan

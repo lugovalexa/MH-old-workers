@@ -63,11 +63,11 @@ def merge_share_ewcs(
     df = df.dropna(subset="jqi_sum").reset_index(drop=True)
 
     # Ensure a balanced panel
-    unique_mergeid_2011 = set(df[df.year == 2011]["mergeid"].unique())
-    unique_mergeid_2015 = set(df[df.year == 2015]["mergeid"].unique())
-    intersection_ids = unique_mergeid_2011.intersection(unique_mergeid_2015)
+    # unique_mergeid_2011 = set(df[df.year == 2011]["mergeid"].unique())
+    # unique_mergeid_2015 = set(df[df.year == 2015]["mergeid"].unique())
+    # intersection_ids = unique_mergeid_2011.intersection(unique_mergeid_2015)
 
-    df = df[df["mergeid"].isin(intersection_ids)].reset_index(drop=True)
+    # df = df[df["mergeid"].isin(intersection_ids)].reset_index(drop=True)
 
     # Save to output CSV
     df.to_csv(output_csv, index=False)

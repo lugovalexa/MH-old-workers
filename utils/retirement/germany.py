@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def germany_age(row):
     # Wave 4
     if row["wave"] == 4:
@@ -17,3 +20,20 @@ def germany_age(row):
                 return 65.17
             else:
                 return row["age"] + 5 - row["yrscontribution"]
+
+
+def germany_age_early(row):
+    if (row["gender"] == "Female") and (row["yrbirth"] < 1952):
+        if row["yrscontribution"] + 60 - row["age"] >= 15:
+            return 60
+        elif row["age"] + 15 - row["yrscontribution"] < 65:
+            return row["age"] + 15 - row["yrscontribution"]
+        else:
+            return np.nan
+    else:
+        if row["yrscontribution"] + 63 - row["age"] >= 35:
+            return 63
+        elif row["age"] + 35 - row["yrscontribution"] < 65:
+            return row["age"] + 35 - row["yrscontribution"]
+        else:
+            return np.nan
