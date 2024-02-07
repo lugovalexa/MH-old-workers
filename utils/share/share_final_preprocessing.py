@@ -56,7 +56,42 @@ def calculate_retirement_age(row):
         return None
 
 
-def add_weights(df, weights_folder_path):
+def calculate_retirement_age_early(row):
+    """
+    Calculate the early retirement age based on country- and year-specific retirement rules.
+
+    Parameters:
+    - row (pd.Series): A Pandas Series representing a row of a DataFrame containing relevant information.
+
+    Returns:
+    - int or None: The calculated early retirement age for the given country, or None if the country is not found.
+
+    Note:
+    - This function relies on specific functions for each country to calculate early retirement age.
+    - The functions for each country should are defined separately (e.g., austria_age_early, belgium_age_early) and are located in utils/retirement folder.
+    """
+    country = row["country"]
+    country_functions_age = {
+        "Austria": austria_age_early,
+        "Belgium": belgium_age_early,
+        "Czech Republic": czech_republic_age_early,
+        "Denmark": denmark_age_early,
+        "Estonia": estonia_age_early,
+        "France": france_age_early,
+        "Germany": germany_age_early,
+        "Italy": italy_age_early,
+        "Slovenia": slovenia_age_early,
+        "Spain": spain_age_early,
+        "Sweden": sweden_age_early,
+        "Switzerland": switzerland_age_early,
+    }
+    if country in country_functions_age:
+        return country_functions_age[country](row)
+    else:
+        return None
+
+
+def add_weights_longitudinal(df, weights_folder_path):
     """
     Add longitudinal weights to a DataFrame based on STATA-calculated weights following SHARE templates.
 
@@ -71,7 +106,6 @@ def add_weights(df, weights_folder_path):
     - The function assumes that weight files in the specified folder follow SHARE templates.
     - Weight files are expected to be in Stata format (.dta) and contain columns "mergeid", "dw_w4", and "my_wgt".
     - The resulting DataFrame will be merged with the input DataFrame based on the "mergeid" column.
-    - Rows with missing weights ("my_wgt") will be dropped from the resulting DataFrame.
     """
     file_list = os.listdir(weights_folder_path)
     datasets = []
@@ -80,10 +114,9 @@ def add_weights(df, weights_folder_path):
             file_path = os.path.join(weights_folder_path, file)
             data = pd.read_stata(file_path)
             datasets.append(data)
-    weights = pd.concat(datasets, ignore_index=True)[["mergeid", "dw_w4", "my_wgt"]]
+    weights = pd.concat(datasets, ignore_index=True)[["mergeid", "my_wgt"]]
 
     df = df.merge(weights, on="mergeid", how="left")
-    df = df.dropna(subset=["my_wgt"]).reset_index(drop=True)
 
     return df
 
@@ -123,15 +156,16 @@ def share_final_preprocessing(df):
 
     # Set legal retirement age
     df["retirement_age"] = df.apply(calculate_retirement_age, axis=1)
+    df["retirement_age_early"] = df.apply(calculate_retirement_age_early, axis=1)
+    df["retirement_age_minimum"] = df[["retirement_age", "retirement_age_early"]].min(
+        axis=1
+    )
 
-    # Delete those who are above the retirement age (continue to work longer)
-    df = df[df["retirement_age"] > df["age"]].reset_index(drop=True)
-
-    print(f"N obs retirement age and filter to be under it: {len(df)}")
+    print(f"N obs retirement age: {len(df)}")
 
     # Calculate resting work horizon
-    df["work_horizon"] = df["retirement_age"] - df["age"]
-    df = df[df.work_horizon <= 15].reset_index(drop=True)
+    df["work_horizon"] = df["retirement_age_minimum"] - df["age"]
+    df = df[(df.work_horizon >= 0) & (df.work_horizon <= 15)].reset_index(drop=True)
 
     # Change in work horizon
     horizon2011 = (
@@ -163,14 +197,31 @@ def share_final_preprocessing(df):
     print(
         "Retirement age, work horizon and work horizon change by reforms - calculated"
     )
+    print(f"N obs after work horizon change: {len(df)}")
 
-    # Add weights imputed in STATA
-    df = add_weights(
+    # Add longitudinal weights imputed in STATA
+    df = add_weights_longitudinal(
         df,
         "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/weights/",
     )
 
-    print("Longitudinal weights imputed in STATA - added")
+    # Add crossectional weights provided by SHARE
+    weights2011 = pd.read_stata(
+        "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/sharew4_rel8-0-0_ALL_datasets_stata/sharew4_rel8-0-0_gv_weights.dta"
+    )
+    weights2015 = pd.read_stata(
+        "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/sharew6_rel8-0-0_ALL_datasets_stata/sharew6_rel8-0-0_gv_weights.dta"
+    )
+    df = df.merge(weights2011[["mergeid", "cciw_w4"]], on="mergeid", how="left")
+    df = df.merge(weights2015[["mergeid", "cciw_w6"]], on="mergeid", how="left")
+
+    print("Longitudinal and crossectional weights - added")
     print(f"N obs after weights: {len(df)}")
+
+    # Format isco column
+    df["isco"] = pd.NA
+    df.loc[df["year"] == 2011, "isco"] = df.loc[df["year"] == 2011, "isco2011"]
+    df.loc[df["year"] == 2015, "isco"] = df.loc[df["year"] == 2015, "isco2015"]
+    df = df.drop(columns=["isco2011", "isco2015"])
 
     return df

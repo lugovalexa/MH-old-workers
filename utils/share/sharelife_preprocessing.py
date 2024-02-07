@@ -179,45 +179,6 @@ def calculate_education_years(waves):
 
     return edu_sum
 
-    # def sharelife_job(df):
-    """
-    Perform data preprocessing for job-related information in Sharelife data.
-
-    Parameters:
-    - df (pd.DataFrame): The Sharelife DataFrame containing individual information.
-
-    Returns:
-    - pd.DataFrame: The preprocessed DataFrame with identified current job ISCO codes.
-
-    Note:
-    - The function identifies the current job ISCO code for each individual based on available columns.
-    - Individuals with missing or non-positive ISCO codes are dropped from the DataFrame.
-    - Some ISCO codes are corrected by appending a missing '0' at the end for specific cases.
-    - Individuals who changed jobs between 2011 and 2017 are excluded from the DataFrame.
-    - The resulting DataFrame includes columns such as 'mergeid', 'isco', and 'job_start'.
-
-    """
-    # Identify current job isco
-    isco_columns = [f"re012isco_{i}" for i in range(1, 21)]
-    df["isco"] = df[isco_columns].apply(get_last_valid, axis=1)
-
-    df = df[df.isco > 0].reset_index(drop=True)  # Drop individuals with missing values
-    df = df.dropna(subset="isco").reset_index(drop=True)
-
-    df["isco"] = df["isco"].astype(
-        int
-    )  # Correct codes when one 0 is missing at the end
-    df["isco"] = df["isco"].apply(lambda x: x * 10 if 99 < x < 1000 else x)
-
-    # Leave only those who did not change job between 2011 and 2017
-    start_columns = [f"re011_{i}" for i in range(1, 21)]
-    df["job_start"] = df[start_columns].apply(get_last_valid, axis=1)
-    df = df[df["job_start"] <= 2011].reset_index(drop=True)
-
-    print("Current ISCO - identified, those changed job - deleted")
-
-    return df
-
 
 def sharelife_job(df):
     """
@@ -233,7 +194,6 @@ def sharelife_job(df):
     - The function identifies the current job ISCO code for each individual based on available columns.
     - Individuals with missing or non-positive ISCO codes are dropped from the DataFrame.
     - Some ISCO codes are corrected by appending a missing '0' at the end for specific cases.
-    - Individuals who changed jobs between 2011 and 2017 are excluded from the DataFrame.
     - The resulting DataFrame includes columns such as 'mergeid', 'isco', and 'job_start'.
 
     """
@@ -282,7 +242,7 @@ def sharelife_job(df):
     df["isco2011"] = df["isco2011"].apply(lambda x: x * 10 if 99 < x < 1000 else x)
     df["isco2015"] = df["isco2015"].apply(lambda x: x * 10 if 99 < x < 1000 else x)
 
-    print("Current ISCO - identified, those changed job - deleted")
+    print("Current ISCO - identified")
 
     return df
 

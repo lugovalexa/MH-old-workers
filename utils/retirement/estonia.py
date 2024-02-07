@@ -30,5 +30,9 @@ def estonia_age_early(row):
         row["age"] + 15 - row["yrscontribution"] >= row["retirement_age"] - 3
     ):
         return row["age"] + 15 - row["yrscontribution"]
+    elif (row["age"] + 15 - row["yrscontribution"] < row["retirement_age"]) and (
+        row["age"] + 15 - row["yrscontribution"] < row["retirement_age"] - 3
+    ):
+        return row["retirement_age"] - 3
     else:
         return np.nan

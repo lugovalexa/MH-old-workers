@@ -140,6 +140,10 @@ def czech_republic_age_early(row):
             row["age"] + 27 - row["yrscontribution"] >= row["retirement_age"] - 3
         ):
             return row["age"] + 27 - row["yrscontribution"]
+        elif (row["age"] + 27 - row["yrscontribution"] < row["retirement_age"]) and (
+            row["age"] + 27 - row["yrscontribution"] < row["retirement_age"] - 3
+        ):
+            return row["retirement_age"] - 3
         else:
             return np.nan
     # Wave 6
