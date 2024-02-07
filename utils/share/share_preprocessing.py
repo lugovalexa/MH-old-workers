@@ -322,16 +322,16 @@ def share_preprocessing(df, data_with_isco):
 
     print("Current year, age, number of children and living with a partner - imputed")
     # Leave only employed
-    # df = df[
-    #    df.ep005_ == "Employed or self-employed (including working for family business)"
-    # ].reset_index(drop=True)
-    # print(f"N obs after leaving only employed: {len(df)}")
+    df = df[
+        df.ep005_ == "Employed or self-employed (including working for family business)"
+    ].reset_index(drop=True)
+    print(f"N obs after leaving only employed: {len(df)}")
     # Delete those eligible to disability or other special state pensions
     # df = df[(df.ep071dno == "Selected") | (df.ep671dno == "Selected")].reset_index(
     #    drop=True
     # )
     # print(f"N obs after deleting special conditions pension: {len(df)}")
-    # print("Currently not working and eligible to special pensions - deleted")
+    print("Currently not working (and eligible to special pensions) - deleted")
     # Add job status
     df["ep009_"] = (
         df["ep009_"]
