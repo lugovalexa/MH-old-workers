@@ -44,7 +44,13 @@ def calculate_retirement_age(row):
         "Estonia": estonia_age,
         "France": france_age,
         "Germany": germany_age,
+        "Greece": greece_age,
+        "Hungary": hungary_age,
         "Italy": italy_age,
+        "Luxembourg": luxembourg_age,
+        "Netherlands": netherlands_age,
+        "Poland": poland_age,
+        "Portugal": portugal_age,
         "Slovenia": slovenia_age,
         "Spain": spain_age,
         "Sweden": sweden_age,
@@ -79,7 +85,13 @@ def calculate_retirement_age_early(row):
         "Estonia": estonia_age_early,
         "France": france_age_early,
         "Germany": germany_age_early,
+        "Greece": greece_age_early,
+        "Hungary": hungary_age_early,
         "Italy": italy_age_early,
+        "Luxembourg": luxembourg_age_early,
+        "Netherlands": netherlands_age_early,
+        "Poland": poland_age_early,
+        "Portugal": portugal_age_early,
         "Slovenia": slovenia_age_early,
         "Spain": spain_age_early,
         "Sweden": sweden_age_early,
@@ -155,28 +167,56 @@ def share_final_preprocessing(df):
     print(f"N obs after data types: {len(df)}")
 
     # Set legal retirement age
-    df["retirement_age"] = df.apply(calculate_retirement_age, axis=1)
-    df["retirement_age_early"] = df.apply(calculate_retirement_age_early, axis=1)
-    df["retirement_age_minimum"] = df[["retirement_age", "retirement_age_early"]].min(
-        axis=1
-    )
 
-    print(f"N obs retirement age: {len(df)}")
+    # Synthesize data for wave 4 for those only present in wave 6
+    mergeid_counts6 = df["mergeid"].value_counts()
+    unique_mergeids6 = mergeid_counts6[mergeid_counts6 == 1].index
+    unique_rows6 = df[df["mergeid"].isin(unique_mergeids6)]
+    unique_rows6 = unique_rows6[unique_rows6.wave == 6].reset_index(drop=True)
+    unique_rows6["age"] = unique_rows6["age"] - 4
+    unique_rows6["yrscontribution"] = unique_rows6["yrscontribution"] - 4
+    unique_rows6["wave"] = unique_rows6["wave"] - 2
+
+    # Synthesize data for wave 6 for those only present in wave 4
+    unique_rows4 = df[df["mergeid"].isin(unique_mergeids6)]
+    unique_rows4 = unique_rows4[unique_rows4.wave == 4].reset_index(drop=True)
+    unique_rows4["age"] = unique_rows4["age"] + 4
+    unique_rows4["yrscontribution"] = unique_rows4["yrscontribution"] + 4
+    unique_rows4["wave"] = unique_rows4["wave"] + 2
+
+    # Concatenate additional synthetisized data with main df + choose only columns needed for retirement ages
+    retirement = pd.concat(
+        [df, unique_rows6, unique_rows4], ignore_index=True
+    ).reset_index(drop=True)
+
+    # Run retirement age functions
+    retirement["retirement_age"] = retirement.apply(calculate_retirement_age, axis=1)
+    retirement = retirement.dropna(subset="retirement_age").reset_index(drop=True)
+    retirement["retirement_age_early"] = retirement.apply(
+        calculate_retirement_age_early, axis=1
+    )
+    retirement["retirement_age_minimum"] = retirement[
+        ["retirement_age", "retirement_age_early"]
+    ].min(axis=1)
 
     # Calculate resting work horizon
-    df["work_horizon"] = df["retirement_age_minimum"] - df["age"]
-    df = df[(df.work_horizon >= 0) & (df.work_horizon <= 15)].reset_index(drop=True)
+    retirement["work_horizon"] = (
+        retirement["retirement_age_minimum"] - retirement["age"]
+    )
+    retirement = retirement[
+        (retirement.work_horizon >= 0) & (retirement.work_horizon <= 15)
+    ].reset_index(drop=True)
 
     # Change in work horizon
     horizon2011 = (
-        df[df.year == 2011]
+        retirement[retirement.year == 2011]
         .groupby("mergeid")["work_horizon"]
         .max()
         .reset_index()
         .rename(columns={"work_horizon": "work_horizon2011"})
     )
     horizon2015 = (
-        df[df.year == 2015]
+        retirement[retirement.year == 2015]
         .groupby("mergeid")["work_horizon"]
         .max()
         .reset_index()
@@ -188,11 +228,29 @@ def share_final_preprocessing(df):
     horizon_change["work_horizon_change"] = (
         horizon_change["work_horizon2015"] - horizon_change["work_horizon2015_expected"]
     )
-    df = df.merge(
+    retirement = retirement.merge(
         horizon_change[["mergeid", "work_horizon_change"]], on="mergeid", how="left"
     )
+    retirement = retirement.dropna(subset="work_horizon_change").reset_index(drop=True)
+    retirement = retirement[retirement.work_horizon_change >= 0].reset_index(drop=True)
+
+    # Merge resulting columns with main df
+    df = df.merge(
+        retirement[
+            [
+                "mergeid",
+                "wave",
+                "retirement_age",
+                "retirement_age_early",
+                "retirement_age_minimum",
+                "work_horizon",
+                "work_horizon_change",
+            ]
+        ],
+        on=["mergeid", "wave"],
+        how="left",
+    )
     df = df.dropna(subset="work_horizon_change").reset_index(drop=True)
-    df = df[df.work_horizon_change >= 0].reset_index(drop=True)
 
     print(
         "Retirement age, work horizon and work horizon change by reforms - calculated"
