@@ -31,21 +31,21 @@ def ewcs_preprocessing(df, meta):
     countid_mapping = meta.value_labels["COUNTID"]
     df["countid"] = df["countid"].map(countid_mapping)
 
-    countries = [
-        "Austria",
-        "Belgium",
-        "Czech Republic",
-        "Denmark",
-        "Estonia",
-        "France",
-        "Germany",
-        "Italy",
-        "Slovenia",
-        "Spain",
-        "Sweden",
-        "Switzerland",
-    ]
-    df = df[df["countid"].isin(countries)].reset_index(drop=True)
+    # countries = [
+    #    "Austria",
+    #    "Belgium",
+    #    "Czech Republic",
+    #    "Denmark",
+    #    "Estonia",
+    #    "France",
+    #   "Germany",
+    #   "Italy",
+    #   "Slovenia",
+    #    "Spain",
+    #    "Sweden",
+    #    "Switzerland",
+    # ]
+    # df = df[df["countid"].isin(countries)].reset_index(drop=True)
     # Leave only 2010 and 2015
     df = df[df.year >= 2010].reset_index(drop=True)
     # Drop lines with missing isco codes

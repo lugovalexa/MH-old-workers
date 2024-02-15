@@ -140,9 +140,7 @@ def czech_republic_age_early(row):
             row["age"] + 27 - row["yrscontribution"] >= row["retirement_age"] - 3
         ):
             return row["age"] + 27 - row["yrscontribution"]
-        elif (row["age"] + 27 - row["yrscontribution"] < row["retirement_age"]) and (
-            row["age"] + 27 - row["yrscontribution"] < row["retirement_age"] - 3
-        ):
+        elif row["age"] + 27 - row["yrscontribution"] < row["retirement_age"] - 3:
             return row["retirement_age"] - 3
         else:
             return np.nan
@@ -158,6 +156,19 @@ def czech_republic_age_early(row):
                 and (row["age"] + 31 - row["yrscontribution"] >= 60)
             ):
                 return row["age"] + 31 - row["yrscontribution"]
+            elif (
+                (row["age"] + 31 - row["yrscontribution"] < row["retirement_age"])
+                and (
+                    row["age"] + 31 - row["yrscontribution"]
+                    >= row["retirement_age"] - 3
+                )
+                and (row["age"] + 31 - row["yrscontribution"] < 60)
+            ):
+                return 60
+            elif (
+                row["age"] + 31 - row["yrscontribution"] < row["retirement_age"] - 3
+            ) and (row["age"] + 31 - row["yrscontribution"] < 60):
+                return 60
             else:
                 return np.nan
         else:
@@ -170,5 +181,18 @@ def czech_republic_age_early(row):
                 and (row["age"] + 31 - row["yrscontribution"] >= 60)
             ):
                 return row["age"] + 31 - row["yrscontribution"]
+            elif (
+                (row["age"] + 31 - row["yrscontribution"] < row["retirement_age"])
+                and (
+                    row["age"] + 31 - row["yrscontribution"]
+                    >= row["retirement_age"] - 5
+                )
+                and (row["age"] + 31 - row["yrscontribution"] < 60)
+            ):
+                return 60
+            elif (
+                row["age"] + 31 - row["yrscontribution"] < row["retirement_age"] - 5
+            ) and (row["age"] + 31 - row["yrscontribution"] < 60):
+                return 60
             else:
                 return np.nan

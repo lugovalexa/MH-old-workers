@@ -147,6 +147,9 @@ def share_final_preprocessing(df):
     """
     print(f"N obs initial: {len(df)}")
 
+    # Convert gender to text
+    df["gender"] = df["gender"].replace({1: "Female", 0: "Male"})
+
     # Drop extra age columns
     df = df.drop(columns=["age2015", "age2017", "age2020"])
 
@@ -174,6 +177,7 @@ def share_final_preprocessing(df):
     unique_rows6 = df[df["mergeid"].isin(unique_mergeids6)]
     unique_rows6 = unique_rows6[unique_rows6.wave == 6].reset_index(drop=True)
     unique_rows6["age"] = unique_rows6["age"] - 4
+    unique_rows6["year"] = unique_rows6["year"] - 4
     unique_rows6["yrscontribution"] = unique_rows6["yrscontribution"] - 4
     unique_rows6["wave"] = unique_rows6["wave"] - 2
 
@@ -181,13 +185,12 @@ def share_final_preprocessing(df):
     unique_rows4 = df[df["mergeid"].isin(unique_mergeids6)]
     unique_rows4 = unique_rows4[unique_rows4.wave == 4].reset_index(drop=True)
     unique_rows4["age"] = unique_rows4["age"] + 4
+    unique_rows4["year"] = unique_rows4["year"] + 4
     unique_rows4["yrscontribution"] = unique_rows4["yrscontribution"] + 4
     unique_rows4["wave"] = unique_rows4["wave"] + 2
 
-    # Concatenate additional synthetisized data with main df + choose only columns needed for retirement ages
-    retirement = pd.concat(
-        [df, unique_rows6, unique_rows4], ignore_index=True
-    ).reset_index(drop=True)
+    # Concatenate additional synthetisized data with main df
+    retirement = pd.concat([df, unique_rows6, unique_rows4], ignore_index=True)
 
     # Run retirement age functions
     retirement["retirement_age"] = retirement.apply(calculate_retirement_age, axis=1)
@@ -200,39 +203,64 @@ def share_final_preprocessing(df):
     ].min(axis=1)
 
     # Calculate resting work horizon
-    retirement["work_horizon"] = (
+    retirement["work_horizon"] = retirement["retirement_age"] - retirement["age"]
+
+    retirement["work_horizon_minimum"] = (
         retirement["retirement_age_minimum"] - retirement["age"]
     )
+
     retirement = retirement[
-        (retirement.work_horizon >= 0) & (retirement.work_horizon <= 15)
+        (retirement.work_horizon >= 1) & (retirement.work_horizon <= 15)
     ].reset_index(drop=True)
 
     # Change in work horizon
     horizon2011 = (
         retirement[retirement.year == 2011]
-        .groupby("mergeid")["work_horizon"]
+        .groupby("mergeid")[["work_horizon", "work_horizon_minimum"]]
         .max()
         .reset_index()
-        .rename(columns={"work_horizon": "work_horizon2011"})
+        .rename(
+            columns={
+                "work_horizon": "work_horizon2011",
+                "work_horizon_minimum": "work_horizon2011_minimum",
+            }
+        )
     )
     horizon2015 = (
         retirement[retirement.year == 2015]
-        .groupby("mergeid")["work_horizon"]
+        .groupby("mergeid")[["work_horizon", "work_horizon_minimum"]]
         .max()
         .reset_index()
-        .rename(columns={"work_horizon": "work_horizon2015"})
+        .rename(
+            columns={
+                "work_horizon": "work_horizon2015",
+                "work_horizon_minimum": "work_horizon2015_minimum",
+            }
+        )
     )
-    horizon_change = horizon2011.merge(horizon2015, on="mergeid", how="left")
-    horizon_change = horizon_change.dropna().reset_index(drop=True)
+    horizon_change = horizon2011.merge(horizon2015, on="mergeid", how="inner")
     horizon_change["work_horizon2015_expected"] = horizon_change["work_horizon2011"] - 4
     horizon_change["work_horizon_change"] = (
         horizon_change["work_horizon2015"] - horizon_change["work_horizon2015_expected"]
     )
-    retirement = retirement.merge(
-        horizon_change[["mergeid", "work_horizon_change"]], on="mergeid", how="left"
+    horizon_change["work_horizon2015_minimum_expected"] = (
+        horizon_change["work_horizon2011_minimum"] - 4
     )
-    retirement = retirement.dropna(subset="work_horizon_change").reset_index(drop=True)
-    retirement = retirement[retirement.work_horizon_change >= 0].reset_index(drop=True)
+    horizon_change["work_horizon_change_minimum"] = (
+        horizon_change["work_horizon2015_minimum"]
+        - horizon_change["work_horizon2015_minimum_expected"]
+    )
+    retirement = retirement.merge(
+        horizon_change[
+            ["mergeid", "work_horizon_change", "work_horizon_change_minimum"]
+        ],
+        on="mergeid",
+        how="inner",
+    )
+    retirement = retirement[
+        (retirement.work_horizon_change >= 0)
+        & (retirement.work_horizon_change_minimum >= 0)
+    ].reset_index(drop=True)
 
     # Merge resulting columns with main df
     df = df.merge(
@@ -244,13 +272,14 @@ def share_final_preprocessing(df):
                 "retirement_age_early",
                 "retirement_age_minimum",
                 "work_horizon",
+                "work_horizon_minimum",
                 "work_horizon_change",
+                "work_horizon_change_minimum",
             ]
         ],
         on=["mergeid", "wave"],
-        how="left",
+        how="inner",
     )
-    df = df.dropna(subset="work_horizon_change").reset_index(drop=True)
 
     print(
         "Retirement age, work horizon and work horizon change by reforms - calculated"
