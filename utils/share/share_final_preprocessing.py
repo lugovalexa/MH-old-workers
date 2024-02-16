@@ -302,6 +302,11 @@ def share_final_preprocessing(df):
     df = df.merge(weights2011[["mergeid", "cciw_w4"]], on="mergeid", how="left")
     df = df.merge(weights2015[["mergeid", "cciw_w6"]], on="mergeid", how="left")
 
+    df["cciw"] = df.apply(
+        lambda row: row["cciw_w4"] if row["wave"] == 4 else row["cciw_w6"], axis=1
+    )
+    df = df.dropna(subset="cciw").reset_index(drop=True)
+
     print("Longitudinal and crossectional weights - added")
     print(f"N obs after weights: {len(df)}")
 
@@ -309,6 +314,6 @@ def share_final_preprocessing(df):
     df["isco"] = pd.NA
     df.loc[df["year"] == 2011, "isco"] = df.loc[df["year"] == 2011, "isco2011"]
     df.loc[df["year"] == 2015, "isco"] = df.loc[df["year"] == 2015, "isco2015"]
-    df = df.drop(columns=["isco2011", "isco2015"])
+    df = df.drop(columns=["isco2011", "isco2015", "cciw_w4", "cciw_w6"])
 
     return df

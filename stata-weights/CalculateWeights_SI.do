@@ -2,9 +2,9 @@
 *-----------------------------------------------------------------------------
 clear
 set linesize 100
-cd "/Users/dimaf/Documents/Sasha/"
-adopath ++ "/Users/dimaf/Documents/Sasha/"
-local data "/Users/dimaf/Documents/Sasha/data/"
+cd "/Users/alexandralugova/Documents/GitHub/MH-old-workers/stata-weights"
+adopath ++ "/Users/alexandralugova/Documents/GitHub/MH-old-workers/stata-weights"
+local data "/Users/alexandralugova/Documents/GitHub/MH-old-workers/stata-weights/data/"
 *-----------------------------------------------------------------------------
 global wi 4
 global wf 6
