@@ -316,4 +316,6 @@ def share_final_preprocessing(df):
     df.loc[df["year"] == 2015, "isco"] = df.loc[df["year"] == 2015, "isco2015"]
     df = df.drop(columns=["isco2011", "isco2015", "cciw_w4", "cciw_w6"])
 
+    df["gender"] = df["gender"].replace({"Male": 0, "Female": 1})
+
     return df

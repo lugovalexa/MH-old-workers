@@ -23,46 +23,46 @@ data$thinc_log <- log(data$thinc + 1e-8)
 data$eurod_log <- log(data$eurod + 1e-8)
 
 data$post = ifelse(data$year >= 2015, 1, 0)
-data$treated0 <- ifelse(data$work_horizon_change > 0, 1, 0)
-data$treated1 <- ifelse(data$work_horizon_change > 1, 1, 0)
-data$treated2 <- ifelse(data$work_horizon_change >= 2, 1, 0)
+data$treated0 <- ifelse(data$work_horizon_change_minimum > 0, 1, 0)
+data$treated1 <- ifelse(data$work_horizon_change_minimum > 1, 1, 0)
+data$treated2 <- ifelse(data$work_horizon_change_minimum >= 2, 1, 0)
 
 # Cell
 data$cell1 <- paste(data$country, data$gender, sep = "_")
 
-data$cell2 <- paste(data$country, data$work_horizon_change, sep = "_")
+data$cell2 <- paste(data$country, data$work_horizon_change_minimum, sep = "_")
 cells_to_remove <- data %>% group_by(cell2) %>% summarise(count = n(), .groups = 'drop') %>% filter(count < 4) %>% pull(cell2)
 data <- data %>% filter(!(cell2 %in% cells_to_remove))
 
 # Subsets for genders
-dataf <- subset(data,gender==1)
-datam <- subset(data,gender==0)
+dataf <- subset(data,gender=="Female")
+datam <- subset(data,gender=="Male")
 
 # Basic model
-fit1 <- lm(eurod ~ post*treated0, data=data, weights=my_wgt)
+fit1 <- lm(eurod ~ post*treated0, data=data, weights=cciw)
 summary(fit1, robust = "vcovHC")
 
 # Model with cell fixed effects
-fit2 <- lm(eurod ~ post*treated0 + as.factor(cell1), data=data, weights=my_wgt)
+fit2 <- lm(eurod ~ post*treated0 + as.factor(cell1), data=data, weights=cciw)
 summary(fit2, robust = "vcovHC")
 
 # Full model without all indexes
-fit3 <- lm(eurod ~ post*treated0 + partnerinhh + nb_children + nb_grandchildren + yrseducation + sphus + chronic
+fit3 <- lm(eurod ~ post*treated2 + partnerinhh + nb_children + nb_grandchildren + yrseducation + sphus + chronic
            + life_insurance + investment + thinc_log + work_horizon + jqi_sum + as.factor(cell1) + as.factor(industry),
-           data=data, weights=my_wgt)
+           data=datam, weights=cciw)
 summary(fit3, robust = "vcovHC")
 
 # Full model
-fit4 <- lm(eurod ~ post*treated0 + gender + partnerinhh + nb_children + nb_grandchildren + yrseducation + sphus + chronic
+fit4 <- lm(eurod ~ post*treated0 + as.factor(gender) + partnerinhh + nb_children + nb_grandchildren + yrseducation + sphus + chronic
             + life_insurance + investment + thinc_log + work_horizon + jqi_physical_environment + jqi_social_environment
             + jqi_intensity + jqi_prospects + jqi_working_time_quality + jqi_skills_discretion + as.factor(cell1) + as.factor(industry),
-            data=subset(dataf,jqi_physical_environment > median(jqi_physical_environment)), weights=my_wgt)
+            data=subset(dataf,jqi_physical_environment > median(jqi_physical_environment)), weights=cciw)
 summary(fit4, robust = "vcovHC")$coefficients['post:treated0',]
 
 # Clustered errors
-clustered_se <- vcovHC(fit4, type = "HC1", cluster = "cell1")
+clustered_se <- vcovHC(fit1, type = "HC1", cluster = "cell1")
 robust_se <- sqrt(diag(clustered_se))
-coeftest(fit4, vcov. = clustered_se)
+coeftest(fit1, vcov. = clustered_se)
 
 # Formula
 interaction_formula <- paste(interaction_terms_colnames, collapse = " + ")

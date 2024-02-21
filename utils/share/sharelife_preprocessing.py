@@ -347,7 +347,7 @@ def contribution_years(df):
     df = df.merge(first_contribution, on="mergeid", how="left")
 
     # Delete those with less than 10 years of contributions in 2015
-    # df = df[(df["yrscontribution2017"] >= 12)].reset_index(drop=True)
+    df = df[(df["yrscontribution2017"] >= 12)].reset_index(drop=True)
 
     # Delete those who started work before the age of 10
     df["yr1contribution"] = df["yr1contribution"].fillna(df["yrbirth"] + 20)
