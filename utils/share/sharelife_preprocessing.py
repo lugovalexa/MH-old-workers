@@ -235,9 +235,7 @@ def sharelife_job(df):
     # Drop individuals with missing values
     df = df[(df.isco2011 > 0) & (df.isco2015 > 0)].reset_index(drop=True)
     df = df.dropna(subset=["isco2011", "isco2015"]).reset_index(drop=True)
-
     df[["isco2011", "isco2015"]] = df[["isco2011", "isco2015"]].astype(int)
-
     # Correct codes when one 0 is missing at the end
     df["isco2011"] = df["isco2011"].apply(lambda x: x * 10 if 99 < x < 1000 else x)
     df["isco2015"] = df["isco2015"].apply(lambda x: x * 10 if 99 < x < 1000 else x)
@@ -347,14 +345,14 @@ def contribution_years(df):
     df = df.merge(first_contribution, on="mergeid", how="left")
 
     # Delete those with less than 10 years of contributions in 2015
-    df = df[(df["yrscontribution2017"] >= 12)].reset_index(drop=True)
+    # df = df[(df["yrscontribution2017"] >= 12)].reset_index(drop=True)
 
     # Delete those who started work before the age of 10
     df["yr1contribution"] = df["yr1contribution"].fillna(df["yrbirth"] + 20)
     df["yr1contribution"] = df["yr1contribution"].astype("int")
 
     print("Years of contribution, 1st year of contribution - calculated")
-    print("Those worked less than 10 years / started work before age of 10 - deleted")
+    # print("Those worked less than 10 years - deleted")
 
     return df
 

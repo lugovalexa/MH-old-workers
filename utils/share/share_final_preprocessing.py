@@ -156,8 +156,11 @@ def share_final_preprocessing(df):
     # Recalculate years of contribution
     df["yrscontribution"] = df.apply(calculate_contribution, axis=1)
     df = df.drop(columns="yrscontribution2017")
+    df = df[df.yrscontribution >= 10].reset_index(drop=True)
 
-    print("Current years of contribution - calculated")
+    print(
+        "Current years of contribution - calculated, those with less 10 years - deleted"
+    )
 
     # Change some data types
     columns_to_convert = ["partnerinhh", "eurod", "eurodcat", "yrbirth"]
@@ -210,7 +213,7 @@ def share_final_preprocessing(df):
     )
 
     retirement = retirement[
-        (retirement.work_horizon >= 1) & (retirement.work_horizon <= 15)
+        (retirement.work_horizon_minimum >= 1) & (retirement.work_horizon_minimum <= 10)
     ].reset_index(drop=True)
 
     # Change in work horizon
@@ -314,8 +317,12 @@ def share_final_preprocessing(df):
     df["isco"] = pd.NA
     df.loc[df["year"] == 2011, "isco"] = df.loc[df["year"] == 2011, "isco2011"]
     df.loc[df["year"] == 2015, "isco"] = df.loc[df["year"] == 2015, "isco2015"]
-    df = df.drop(columns=["isco2011", "isco2015", "cciw_w4", "cciw_w6"])
 
+    # Create column for 1 digit ISCO
+    df["isco1"] = df["isco"].astype(str).str[0]
+    df["isco1"] = df["isco1"].astype(int)
+
+    # Edit gender column
     df["gender"] = df["gender"].replace({"Male": 0, "Female": 1})
 
     return df
