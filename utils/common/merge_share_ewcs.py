@@ -5,7 +5,6 @@ import pandas as pd
 
 def merge_share_ewcs(
     output_csv,
-    not_country_wise=False,
     convert_to_3_digits=False,
 ):
     """
@@ -13,18 +12,14 @@ def merge_share_ewcs(
 
     Parameters:
     - output_csv (str): The path to save the merged dataset CSV file.
-    - not_country_wise (bool, optional): If True, aggregate indexes by year and isco only.
     - convert_to_3_digits (bool, optional): If True, convert isco codes to 3 digits.
-    - exclude_wave_5 (bool, optional): If True, exclude data from wave 5.
-    - balanced (bool, optional): If True, create a balanced panel by keeping only common IDs between waves.
-
     Note:
-    The function reads two CSV files, 'share_clean_w46.csv' and either 'work_quality_indexes_year_country_3digits.csv'
-    or 'work_quality_indexes_year_country_4digits.csv', depending on the `convert_to_3_digits` parameter.
+    The function reads two CSV files, 'share_clean_w46.csv' and either 'work_quality_indexes_country_3digits.csv'
+    or 'work_quality_indexes_country_4digits.csv', depending on the `convert_to_3_digits` parameter.
     The merged dataset is saved to the specified `output_csv` file.
 
     Examples:
-    >>> merge_share_ewcs("output_merged_data.csv", not_country_wise=True, convert_to_3_digits=True)
+    >>> merge_share_ewcs("output_merged_data.csv", convert_to_3_digits=True)
     """
     # Set directory
     os.chdir(
@@ -34,18 +29,9 @@ def merge_share_ewcs(
     # Read input CSVs
     df = pd.read_csv("share_clean_w46.csv")
     if convert_to_3_digits:
-        indexes = pd.read_csv("work_quality_indexes_year_country_3digits.csv")
+        indexes = pd.read_csv("work_quality_indexes_country_3digits.csv")
     else:
-        indexes = pd.read_csv("work_quality_indexes_year_country_4digits.csv")
-
-    # Optional: aggregate indexes if year only-wise merge
-    if not_country_wise:
-        indexes = (
-            indexes.drop(columns="country")
-            .groupby(["year", "isco"])
-            .mean()
-            .reset_index()
-        )
+        indexes = pd.read_csv("work_quality_indexes_country_4digits.csv")
 
     # Optional: Convert isco to 3 digits
     if convert_to_3_digits:
@@ -55,10 +41,7 @@ def merge_share_ewcs(
         )
 
     # Merge on specified columns
-    if not_country_wise:
-        df = df.merge(indexes, on=["year", "isco"], how="left")
-    else:
-        df = df.merge(indexes, on=["year", "country", "isco"], how="left")
+    df = df.merge(indexes, on=["country", "isco"], how="left")
 
     df = df.dropna(subset="jqi_sum").reset_index(drop=True)
 

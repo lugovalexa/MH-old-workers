@@ -2,7 +2,7 @@
 cd "/Users/alexandralugova/Documents/GitHub/MH-old-workers/stata"
 
 * Data
-import delimited "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/4digits_year.csv", clear
+import delimited "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/3digits_year_country.csv", clear
 
 * Leave a balanced panel
 *sort mergeid
@@ -14,18 +14,20 @@ import delimited "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/da
 *keep if !inlist(country, "Greece", "Hungary", "Luxembourg","Netherlands","Poland","Portugal")
 
 * Filter by gender
-*keep if gender == 0
+keep if gender == 1
 
 * Filter by working conditions
-*egen mean_jqi = mean(jqi_intensity)
-*egen sd_jqi = sd(jqi_intensity)
-*keep if jqi_intensity <= mean_jqi - sd_jqi
+egen mean_jqi = mean(jqi_prospects)
+egen sd_jqi = sd(jqi_prospects)
+*keep if jqi_prospects <= mean_jqi - sd_jqi
+keep if jqi_prospects >= mean_jqi + sd_jqi
 *egen median_jqi = median(jqi_social_environment)
 *keep if jqi_social_environment < median_jqi
 
 * Create variables for DID
 gen post = (year == 2015)
-gen treated = (work_horizon_change > 1)
+gen treated = (work_horizon_change_minimum > 0)
+*gen treated = work_horizon_change_minimum
 gen did = post * treated
 
 gen cell1 = country + "_" + string(gender)
@@ -45,21 +47,26 @@ gen agesq = age^2
 gen thinclog = log(thinc)
 
 * DID regression
-regress eurod i.did i.treated i.post [aweight=cciw], vce(cluster cell1)
+*regress eurod i.did i.treated i.post [aweight=cciw], vce(cluster cell1)
+*regress eurod did treated i.post [aweight=cciw], vce(cluster cell1)
 
-regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects [aweight=cciw], vce(cluster cell1)
+regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects i.isco1 i.industry_encoded i.cell1_encoded [aweight=cciw], vce(cluster cell1)
+
+*regress eurod did treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity_slim jqi_prospects [aweight=cciw], vce(cluster cell1)
 
 *regress eurod i.treated i.post i.did i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic work_horizon jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects i.cell1_encoded i.isco1 i.industry_encoded [aweight=cciw], vce(cluster cell1)
 
-regress eurodcat i.did i.treated i.post [aweight=cciw], vce(cluster cell1)
+*regress eurodcat i.did i.treated i.post [aweight=cciw], vce(cluster cell1)
+*regress eurodcat did treated i.post [aweight=cciw], vce(cluster cell1)
 
-regress eurodcat i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects [aweight=cciw], vce(cluster cell1)
+*regress eurodcat i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects [aweight=cciw], vce(cluster cell1)
+*regress eurodcat did treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity_slim jqi_prospects [aweight=cciw], vce(cluster cell1)
 
 *regress eurodcat i.treated i.post i.did i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic work_horizon jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects i.cell1_encoded i.isco1 i.industry_encoded [aweight=cciw], vce(cluster cell1)
 
-logit eurodcat i.treated i.post i.did, vce(cluster cell1)
+*logit eurodcat i.treated i.post i.did, vce(cluster cell1)
 
-regress eurodcat i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects, vce(cluster cell1)
+*regress eurodcat i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects, vce(cluster cell1)
 
 *logit eurodcat i.treated i.post i.did i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic work_horizon jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects i.cell1_encoded i.isco1 i.industry_encoded, vce(cluster cell1)
 
