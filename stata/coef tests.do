@@ -2,7 +2,7 @@
 cd "/Users/alexandralugova/Documents/GitHub/MH-old-workers/stata"
 
 * Data
-import delimited "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/3digits_year_country.csv", clear
+import delimited "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/3digits_country.csv", clear
 
 * Create variables for DID
 gen post = (year == 2015)
@@ -26,18 +26,21 @@ encode industry, generate(industry_encoded)
 gen agesq = age^2
 gen thinclog = log(thinc)
 
-*keep if gender==1
+keep if gender==0
 
-egen mean_jqi = mean(jqi_prospects)
-egen sd_jqi = sd(jqi_prospects)
+*egen mean_jqi = mean(jqi_prospects)
+*egen sd_jqi = sd(jqi_prospects)
 
+quietly su jqi_prospects_w , d
+scalar per25=r(p25)
+scalar per75=r(p75)
 
 * Step 1: Run individual regressions
-qui regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects i.isco1 i.industry_encoded i.cell1_encoded [aweight=cciw] if jqi_prospects <= mean_jqi-sd_jqi
+qui regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion_w jqi_physical_environment_w jqi_social_environment_w jqi_working_time_quality_w jqi_intensity_w jqi_prospects_w jqi_sum_w i.cell1_encoded [aweight=cciw] if jqi_prospects_w <= per25
 
 est sto below
 
-qui regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects  i.isco1 i.industry_encoded i.cell1_encoded [aweight=cciw] if jqi_prospects >= mean_jqi+sd_jqi
+qui regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion_w jqi_physical_environment_w jqi_social_environment_w jqi_working_time_quality_w jqi_intensity_w jqi_prospects_w jqi_sum_w i.cell1_encoded [aweight=cciw] if jqi_prospects_w >= per75
 
 est sto above
 

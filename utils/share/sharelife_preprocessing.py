@@ -42,6 +42,29 @@ def find_column_highest_before_2011(row):
     return column_name.split("_")[-1]
 
 
+def find_column_highest_before_2013(row):
+    """
+    Retrieve the index for the last available isco before or in 2013.
+
+    Parameters:
+    - row (pd.Series): A Pandas Series representing a row of data.
+
+    Returns:
+    - pd.Series or pd.NA: The last valid value in the row, or pd.NA if no valid value is found.
+    """
+    start_columns = [f"re011_{i}" for i in range(1, 21)]
+    valid_values = [
+        row[column]
+        for column in start_columns
+        if pd.notna(row[column]) and row[column] <= 2013
+    ]
+    if not valid_values:
+        return pd.NA
+    max_value = max(valid_values)
+    column_name = [column for column in start_columns if row[column] == max_value][0]
+    return column_name.split("_")[-1]
+
+
 def sharelife_gender_country_age(df):
     """
     Perform data preprocessing for Sharelife data, focusing on gender, country, and age-related information.
@@ -207,13 +230,21 @@ def sharelife_job(df):
     df_lastbefore2011["isco2011"] = df_lastbefore2011[isco_columns].apply(
         get_last_valid, axis=1
     )
+    df_lastbefore2011["isco2013"] = df_lastbefore2011[isco_columns].apply(
+        get_last_valid, axis=1
+    )
     df_lastbefore2011["isco2015"] = df_lastbefore2011[isco_columns].apply(
         get_last_valid, axis=1
     )
 
-    # Identify isco if the last job started after 2011
-    df_lastafter2011 = df[(df["job_start"] > 2011)].reset_index(drop=True)
+    # Identify isco if the last job started after 2011 and before or in 2013
+    df_lastafter2011 = df[
+        (df["job_start"] > 2011) & (df["job_start"] <= 2013)
+    ].reset_index(drop=True)
     df_lastafter2011["isco2015"] = df_lastafter2011[isco_columns].apply(
+        get_last_valid, axis=1
+    )
+    df_lastafter2011["isco2013"] = df_lastafter2011[isco_columns].apply(
         get_last_valid, axis=1
     )
     df_lastafter2011["index_before2011"] = df_lastafter2011[start_columns].apply(
@@ -229,15 +260,45 @@ def sharelife_job(df):
             f"re012isco_{index_before2011}"
         ][i]
 
+    # Identify isco if the last job started after 2013 and before or in 2015
+    df_lastafter2013 = df[
+        (df["job_start"] > 2013) & (df["job_start"] <= 2015)
+    ].reset_index(drop=True)
+    df_lastafter2013["isco2015"] = df_lastafter2013[isco_columns].apply(
+        get_last_valid, axis=1
+    )
+
+    df_lastafter2013["index_before2013"] = df_lastafter2013[start_columns].apply(
+        find_column_highest_before_2013, axis=1
+    )
+    df_lastafter2013 = df_lastafter2013.dropna(subset="index_before2013").reset_index(
+        drop=True
+    )
+    df_lastafter2013["isco2013"] = pd.NA
+    for i in range(len(df_lastafter2013)):
+        index_before2013 = df_lastafter2013["index_before2013"][i]
+        df_lastafter2013["isco2013"][i] = df_lastafter2013[
+            f"re012isco_{index_before2013}"
+        ][i]
+
+    df_lastafter2013["isco2011"] = df_lastafter2013["isco2013"]
+
     # Combine to datasets
-    df = pd.concat([df_lastbefore2011, df_lastafter2011], ignore_index=True)
+    df = pd.concat(
+        [df_lastbefore2011, df_lastafter2011, df_lastafter2013], ignore_index=True
+    )
 
     # Drop individuals with missing values
-    df = df[(df.isco2011 > 0) & (df.isco2015 > 0)].reset_index(drop=True)
-    df = df.dropna(subset=["isco2011", "isco2015"]).reset_index(drop=True)
-    df[["isco2011", "isco2015"]] = df[["isco2011", "isco2015"]].astype(int)
+    df = df[(df.isco2011 > 0) & (df.isco2013 > 0) & (df.isco2015 > 0)].reset_index(
+        drop=True
+    )
+    df = df.dropna(subset=["isco2011", "isco2013", "isco2015"]).reset_index(drop=True)
+    df[["isco2011", "isco2013", "isco2015"]] = df[
+        ["isco2011", "isco2013", "isco2015"]
+    ].astype(int)
     # Correct codes when one 0 is missing at the end
     df["isco2011"] = df["isco2011"].apply(lambda x: x * 10 if 99 < x < 1000 else x)
+    df["isco2013"] = df["isco2013"].apply(lambda x: x * 10 if 99 < x < 1000 else x)
     df["isco2015"] = df["isco2015"].apply(lambda x: x * 10 if 99 < x < 1000 else x)
 
     print("Current ISCO - identified")
@@ -266,6 +327,7 @@ def sharelife_add_job(df):
     # Identify current job isco
     df = df.rename(columns={"ep616isco": "isco2011"})
     df["isco2011"] = df["isco2011"].astype(int)
+    df["isco2013"] = df["isco2011"]
     df["isco2015"] = df["isco2011"]
 
     # Leave only those who did not change job between 2011 and 2015
@@ -418,6 +480,7 @@ def sharelife_preprocessing(df):
             "yr1country",
             "yrseducation",
             "isco2011",
+            "isco2013",
             "isco2015",
             "yrscontribution2017",
             "yr1contribution",
@@ -502,6 +565,7 @@ def sharelife_add_preprocessing(df, sharelife_data):
             "yr1country",
             "yrseducation",
             "isco2011",
+            "isco2013",
             "isco2015",
             "yrscontribution2017",
             "yr1contribution",

@@ -3,23 +3,41 @@ import pandas as pd
 from factor_analyzer import FactorAnalyzer
 from scipy.linalg import eigh
 
+# def calculate_age1(row):
+#    """
+#    Calculate the current age based on available information in the input row.
+#
+#    Parameters:
+#    - row (pd.Series): A Pandas Series representing a row of a DataFrame containing relevant information.
+#
+#    Returns:
+#    - float or np.nan: The calculated current age, or np.nan if there is insufficient information.
+#    """
+#    if not pd.isnull(row["age2011"]):
+#        return row["age2011"] + (row["year"] - 2011)
+#    elif not pd.isnull(row["age2013"]):
+#        return row["age2013"] - (2013 - row["year"])
+#    elif not pd.isnull(row["age2015"]):
+#        return row["age2015"] - (2015 - row["year"])
+#    else:
+#        return np.nan
 
-def calculate_age(row):
+
+def get_last_valid(row):
     """
-    Calculate the current age based on available information in the input row.
+    Retrieve the last valid value from a Pandas Series along each row.
 
     Parameters:
-    - row (pd.Series): A Pandas Series representing a row of a DataFrame containing relevant information.
+    - row (pd.Series): A Pandas Series representing a row of data.
 
     Returns:
-    - float or np.nan: The calculated current age, or np.nan if there is insufficient information.
+    - pd.Series or pd.NA: The last valid value in the row, or pd.NA if no valid value is found.
     """
-    if not pd.isnull(row["age2011"]):
-        return row["age2011"] + (row["year"] - 2011)
-    elif not pd.isnull(row["age2015"]):
-        return row["age2015"] - (2015 - row["year"])
+    last_valid_index = row.last_valid_index()
+    if pd.notnull(last_valid_index):
+        return row[last_valid_index]
     else:
-        return np.nan
+        return pd.NA
 
 
 def number_of_children(df):
@@ -113,7 +131,7 @@ def finance(df):
     - The resulting DataFrame includes additional columns: 'thinc' (household income), 'thinc2' (household income alternative), 'investment' (1 if present), and 'life_insurance' (1 if present).
     """
     # Add household income
-    ws = [4, 6]
+    ws = [4, 5, 6]
     dfs = []
 
     for wave in ws:
@@ -186,14 +204,18 @@ def health(df):
         {"Less than very good": 0, "Very good/excellent": 1}
     )
     # Add number of chronic diseases
-    df["chronic"] = df["chronicw4"].combine_first(df["chronicw6c"])
-    df["chronic2"] = df["chronic2w4"].combine_first(df["chronic2w6"])
+    df["chronic"] = df[["chronicw4", "chronicw5", "chronicw6c"]].apply(
+        get_last_valid, axis=1
+    )
 
     df["chronic"] = df["chronic"].replace(["Don't know", "Refusal"], 0)
     df = df.dropna(subset="chronic").reset_index(drop=True)
 
     print(f"N obs after dropping missing chronic:{len(df)}")
 
+    df["chronic2"] = df[["chronic2w4", "chronic2w5", "chronic2w6"]].apply(
+        get_last_valid, axis=1
+    )
     df["chronic2"] = df["chronic2"].replace(
         {"Less than 2 diseases": 0, "2+ chronic diseases": 1}
     )
@@ -308,11 +330,12 @@ def share_preprocessing(df, data_with_isco):
     print("Those without ISCO codes - deleted")
     print(f"N obs with ISCO: {len(df)}")
     # Add year
-    wave_to_year = {4: 2011, 6: 2015}
+    wave_to_year = {4: 2011, 5: 2013, 6: 2015}
     df["year"] = df["wave"].map(wave_to_year).astype(int)
 
     # Calculate current age
-    df["age"] = df.apply(calculate_age, axis=1)
+    df["age"] = df[["age2011", "age2013", "age2015"]].apply(get_last_valid, axis=1)
+    # df["age"] = df.apply(calculate_age, axis=1)
     print(f"N obs after age calculation: {len(df)}")
     # Calculate number of children and grandchildren
     df = number_of_children(df)

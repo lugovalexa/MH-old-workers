@@ -2,7 +2,7 @@
 cd "/Users/alexandralugova/Documents/GitHub/MH-old-workers/stata"
 
 * Data
-import delimited "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/3digits_year_country.csv", clear
+import delimited "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/3digits_country.csv", clear
 
 * Leave a balanced panel
 *sort mergeid
@@ -11,16 +11,22 @@ import delimited "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/da
 *drop dupcount
 
 * Leave only countries present in both waves
-*keep if !inlist(country, "Greece", "Hungary", "Luxembourg","Netherlands","Poland","Portugal")
+keep if !inlist(country, "Greece", "Hungary", "Luxembourg","Netherlands","Poland","Portugal")
 
 * Filter by gender
-keep if gender == 1
+*keep if gender == 0
 
 * Filter by working conditions
-egen mean_jqi = mean(jqi_prospects)
-egen sd_jqi = sd(jqi_prospects)
+quietly su jqi_prospects_w , d
+scalar per25=r(p25)
+scalar per75=r(p75)
+*keep if jqi_prospects_w <= per25
+keep if jqi_prospects_w >= per75
+
+*egen mean_jqi = mean(jqi_prospects)
+*egen sd_jqi = sd(jqi_prospects)
 *keep if jqi_prospects <= mean_jqi - sd_jqi
-keep if jqi_prospects >= mean_jqi + sd_jqi
+*keep if jqi_prospects >= mean_jqi + sd_jqi
 *egen median_jqi = median(jqi_social_environment)
 *keep if jqi_social_environment < median_jqi
 
@@ -47,10 +53,10 @@ gen agesq = age^2
 gen thinclog = log(thinc)
 
 * DID regression
-*regress eurod i.did i.treated i.post [aweight=cciw], vce(cluster cell1)
+*regress eurod i.did i.treated i.post i.cell1_encoded [aweight=cciw], vce(cluster cell1)
 *regress eurod did treated i.post [aweight=cciw], vce(cluster cell1)
 
-regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects i.isco1 i.industry_encoded i.cell1_encoded [aweight=cciw], vce(cluster cell1)
+regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion_w jqi_physical_environment_w jqi_social_environment_w jqi_working_time_quality_w jqi_intensity_w jqi_prospects_w jqi_sum_w i.cell1_encoded [aweight=cciw], vce(cluster cell1)
 
 *regress eurod did treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity_slim jqi_prospects [aweight=cciw], vce(cluster cell1)
 

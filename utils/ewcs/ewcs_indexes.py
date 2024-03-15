@@ -399,13 +399,13 @@ def sum_wq_index(df):
     )
 
     # Calculate the weighted version
-    df["jqi_sum_weighted"] = (
-        +df["jqi_skills_discretion_weighted"]
-        + df["jqi_social_environment_weighted"]
-        + df["jqi_physical_environment_weighted"]
-        + df["jqi_intensity_weighted"]
-        + df["jqi_prospects_weighted"]
-        + df["jqi_working_time_quality_weighted"]
+    df["jqi_sum_w"] = (
+        +df["jqi_skills_discretion_w"]
+        + df["jqi_social_environment_w"]
+        + df["jqi_physical_environment_w"]
+        + df["jqi_intensity_w"]
+        + df["jqi_prospects_w"]
+        + df["jqi_working_time_quality_w"]
     )
 
     old_min = df["jqi_sum"].min()
@@ -417,12 +417,12 @@ def sum_wq_index(df):
         new_max - new_min
     ) + new_min
 
-    old_min = df["jqi_sum_weighted"].min()
-    old_max = df["jqi_sum_weighted"].max()
+    old_min = df["jqi_sum_w"].min()
+    old_max = df["jqi_sum_w"].max()
 
-    df["jqi_sum_weighted"] = (
-        (df["jqi_sum_weighted"] - old_min) / (old_max - old_min)
-    ) * (new_max - new_min) + new_min
+    # df["jqi_sum_w"] = (
+    #    (df["jqi_sum_w"] - old_min) / (old_max - old_min)
+    # ) * (new_max - new_min) + new_min
 
     print("JQI working quality index (no weights applied)")
     print(df.jqi_sum.describe())
