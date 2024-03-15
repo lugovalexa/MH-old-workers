@@ -84,6 +84,53 @@ def czech_republic_age(row):
                     return 65
                 else:
                     return row["age"] + 17 - row["yrscontribution"]
+        # Wave 5
+        elif row["wave"] == 5:
+            if row["nb_children"] == 0:
+                if row["yrscontribution"] + 61.67 - row["age"] >= 29:
+                    return 61.67
+                elif row["age"] + 29 - row["yrscontribution"] < 62.67 + 5:
+                    return row["age"] + 29 - row["yrscontribution"]
+                elif row["yrscontribution"] + 62.67 + 5 - row["age"] >= 19:
+                    return 62.67 + 5
+                else:
+                    return row["age"] + 19 - row["yrscontribution"]
+            elif row["nb_children"] == 1:
+                if row["yrscontribution"] + 60.67 - row["age"] >= 29:
+                    return 60.67
+                elif row["age"] + 29 - row["yrscontribution"] < 62.67 + 5:
+                    return row["age"] + 29 - row["yrscontribution"]
+                elif row["yrscontribution"] + 62.67 + 5 - row["age"] >= 19:
+                    return 62.67 + 5
+                else:
+                    return row["age"] + 19 - row["yrscontribution"]
+            elif row["nb_children"] == 2:
+                if row["yrscontribution"] + 59.67 - row["age"] >= 29:
+                    return 59.67
+                elif row["age"] + 29 - row["yrscontribution"] < 62.67 + 5:
+                    return row["age"] + 29 - row["yrscontribution"]
+                elif row["yrscontribution"] + 62.67 + 5 - row["age"] >= 19:
+                    return 62.67 + 5
+                else:
+                    return row["age"] + 19 - row["yrscontribution"]
+            elif row["nb_children"] == 3 or row["nb_children"] == 4:
+                if row["yrscontribution"] + 58.67 - row["age"] >= 29:
+                    return 58.67
+                elif row["age"] + 29 - row["yrscontribution"] < 62.67 + 5:
+                    return row["age"] + 29 - row["yrscontribution"]
+                elif row["yrscontribution"] + 62.67 + 5 - row["age"] >= 19:
+                    return 62.67 + 5
+                else:
+                    return row["age"] + 19 - row["yrscontribution"]
+            else:
+                if row["yrscontribution"] + 57.67 - row["age"] >= 29:
+                    return 57.67
+                elif row["age"] + 29 - row["yrscontribution"] < 62.67 + 5:
+                    return row["age"] + 29 - row["yrscontribution"]
+                elif row["yrscontribution"] + 62.67 + 5 - row["age"] >= 19:
+                    return 62.67 + 5
+                else:
+                    return row["age"] + 19 - row["yrscontribution"]
         # Wave 6
         else:
             if row["nb_children"] == 0:
@@ -141,6 +188,16 @@ def czech_republic_age_early(row):
         ):
             return row["age"] + 27 - row["yrscontribution"]
         elif row["age"] + 27 - row["yrscontribution"] < row["retirement_age"] - 3:
+            return row["retirement_age"] - 3
+        else:
+            return np.nan
+    # Wave 4
+    elif row["wave"] == 5:
+        if (row["age"] + 29 - row["yrscontribution"] < row["retirement_age"]) and (
+            row["age"] + 29 - row["yrscontribution"] >= row["retirement_age"] - 3
+        ):
+            return row["age"] + 29 - row["yrscontribution"]
+        elif row["age"] + 29 - row["yrscontribution"] < row["retirement_age"] - 3:
             return row["retirement_age"] - 3
         else:
             return np.nan

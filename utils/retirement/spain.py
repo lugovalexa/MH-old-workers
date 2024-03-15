@@ -8,6 +8,12 @@ def spain_age(row):
             return 65
         else:
             return row["age"] + 15 - row["yrscontribution"]
+    # Wave 5
+    elif row["wave"] == 5:
+        if row["yrscontribution"] + 65.08 - row["age"] >= 15:
+            return 65.08
+        else:
+            return row["age"] + 15 - row["yrscontribution"]
     # Wave 6
     else:
         if row["yrscontribution"] + 65.25 - row["age"] >= 15:
@@ -18,7 +24,7 @@ def spain_age(row):
 
 def spain_age_early(row):
     # Wave 4
-    if row["wave"] == 4:
+    if row["wave"] < 6:
         return np.nan
     # Wave 6
     else:

@@ -37,6 +37,25 @@ def austria_age_early(row):
                 return row["age"] + 15 - row["yrscontribution"]
             else:
                 return np.nan
+    # Wave 5
+    elif row["wave"] == 5:
+        # Male
+        if row["gender"] == "Male":
+            if row["yrscontribution"] + 63 - row["age"] >= 15:
+                return 63
+            elif row["age"] + 15 - row["yrscontribution"] < 65:
+                return row["age"] + 15 - row["yrscontribution"]
+            else:
+                return np.nan
+
+        # Female
+        else:
+            if row["yrscontribution"] + 58 - row["age"] >= 15:
+                return 58
+            elif row["age"] + 15 - row["yrscontribution"] < 60:
+                return row["age"] + 15 - row["yrscontribution"]
+            else:
+                return np.nan
     # Wave 6
     else:
         # Male

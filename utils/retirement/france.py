@@ -53,7 +53,7 @@ def france_age(row):
                 return 67
             else:
                 return row["age"] + 41 - row["yrscontribution"]
-    # Wave 6
+    # Waves 5 and 6
     else:
         if (row["yrbirth"] == 1951 and row["mobirth"] < 7) or (row["yrbirth"] <= 1951):
             if row["yrscontribution"] + 60 - row["age"] >= 41:

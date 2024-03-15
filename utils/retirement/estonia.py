@@ -17,6 +17,12 @@ def estonia_age(row):
                 return 61
             else:
                 return row["age"] + 15 - row["yrscontribution"]
+        # Wave 5
+        elif row["wave"] == 5:
+            if row["yrscontribution"] + 62 - row["age"] >= 15:
+                return 62
+            else:
+                return row["age"] + 15 - row["yrscontribution"]
         # Wave 6
         else:
             if row["yrscontribution"] + 62.5 - row["age"] >= 15:

@@ -26,13 +26,13 @@ def poland_age(row):
             # Male
             else:
                 return 65
-    # Wave 6
-    else:
+    # Wave 5
+    elif row["wave"] == 5:
         # Female
         if row["gender"] == "Female":
             # Born after 1953
             if row["yrbirth"] >= 1953:
-                return 60.67
+                return 60.33
             # Born before 1953
             else:
                 if row["yrbirth"] >= 1949:
@@ -46,7 +46,34 @@ def poland_age(row):
         else:
             # Born after 1949
             if row["yrbirth"] >= 1949:
-                return 65.67
+                return 65.33
+            # Born before 1949
+            else:
+                if row["yrscontribution"] + 65 - row["age"] >= 20:
+                    return 65
+                else:
+                    return row["age"] + 20 - row["yrscontribution"]
+    # Wave 6
+    else:
+        # Female
+        if row["gender"] == "Female":
+            # Born after 1953
+            if row["yrbirth"] >= 1953:
+                return 61
+            # Born before 1953
+            else:
+                if row["yrbirth"] >= 1949:
+                    return 60
+                else:
+                    if row["yrscontribution"] + 60 - row["age"] >= 15:
+                        return 60
+                    else:
+                        return row["age"] + 15 - row["yrscontribution"]
+        # Male
+        else:
+            # Born after 1949
+            if row["yrbirth"] >= 1949:
+                return 66
             # Born before 1949
             else:
                 if row["yrscontribution"] + 65 - row["age"] >= 20:
@@ -72,7 +99,7 @@ def poland_age_early(row):
         # Male
         else:
             return np.nan
-    # Wave 6
+    # Waves 5 and 6
     else:
         # Female
         if row["gender"] == "Female":

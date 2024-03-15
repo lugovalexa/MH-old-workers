@@ -2,8 +2,8 @@ import numpy as np
 
 
 def portugal_age(row):
-    # Wave 4
-    if row["wave"] == 4:
+    # Waves 4 and 5
+    if row["wave"] < 6:
         if row["yrscontribution"] + 65 - row["age"] >= 15:
             return 65
         else:
@@ -17,8 +17,8 @@ def portugal_age(row):
 
 
 def portugal_age_early(row):
-    # Wave 4
-    if row["wave"] == 4:
+    # Waves 4 and 5
+    if row["wave"] < 6:
         if row["yrscontribution"] + 55 - row["age"] >= 30:
             return 55
         elif row["age"] + 30 - row["yrscontribution"] < row["retirement_age"]:

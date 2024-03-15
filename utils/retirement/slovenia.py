@@ -8,7 +8,7 @@ def slovenia_age(row):
             return 63
         else:
             return row["age"] + 15 - row["yrscontribution"]
-    # Wave 6
+    # Waves 5 and 6
     else:
         if row["yrscontribution"] + 65 - row["age"] >= 15:
             return 65
@@ -41,7 +41,7 @@ def slovenia_age_early(row):
                 return row["age"] + 20 - row["yrscontribution"]
             else:
                 return np.nan
-    # Wave 6
+    # Waves 5 and 6
     else:
         if row["yrscontribution"] + 60 - row["age"] >= 40:
             return 60

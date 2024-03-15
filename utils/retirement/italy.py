@@ -20,7 +20,7 @@ def italy_age(row):
                     return 70
                 else:
                     return row["age"] + 5 - row["yrscontribution"]
-        # Wave 6
+        # Waves 5 and 6
         else:
             if row["yr1contribution"] < 1996:
                 if row["yrscontribution"] + 66.25 - row["age"] >= 20:
@@ -65,6 +65,53 @@ def italy_age(row):
                 else:
                     if row["yrscontribution"] + 60 - row["age"] >= 20:
                         return 60
+                    elif row["age"] + 20 - row["yrscontribution"] < 70:
+                        return row["age"] + 20 - row["yrscontribution"]
+                    elif row["yrscontribution"] + 70 - row["age"] >= 5:
+                        return 70
+                    else:
+                        return row["age"] + 5 - row["yrscontribution"]
+        # Wave 5
+        elif row["wave"] == 5:
+            if row["job_status"] == "Self-employed":
+                if row["yr1contribution"] < 1996:
+                    if row["yrscontribution"] + 63.75 - row["age"] >= 20:
+                        return 63.75
+                    else:
+                        return row["age"] + 20 - row["yrscontribution"]
+                else:
+                    if row["yrscontribution"] + 63.75 - row["age"] >= 20:
+                        return 63.75
+                    elif row["age"] + 20 - row["yrscontribution"] < 70:
+                        return row["age"] + 20 - row["yrscontribution"]
+                    elif row["yrscontribution"] + 70 - row["age"] >= 5:
+                        return 70
+                    else:
+                        return row["age"] + 5 - row["yrscontribution"]
+            elif row["job_status"] == "Civil servant":
+                if row["yr1contribution"] < 1996:
+                    if row["yrscontribution"] + 66.25 - row["age"] >= 20:
+                        return 66.25
+                    else:
+                        return row["age"] + 20 - row["yrscontribution"]
+                else:
+                    if row["yrscontribution"] + 66.25 - row["age"] >= 20:
+                        return 66.25
+                    elif row["age"] + 20 - row["yrscontribution"] < 70:
+                        return row["age"] + 20 - row["yrscontribution"]
+                    elif row["yrscontribution"] + 70 - row["age"] >= 5:
+                        return 70
+                    else:
+                        return row["age"] + 5 - row["yrscontribution"]
+            else:
+                if row["yr1contribution"] < 1996:
+                    if row["yrscontribution"] + 62.25 - row["age"] >= 20:
+                        return 62.25
+                    else:
+                        return row["age"] + 20 - row["yrscontribution"]
+                else:
+                    if row["yrscontribution"] + 62.25 - row["age"] >= 20:
+                        return 62.25
                     elif row["age"] + 20 - row["yrscontribution"] < 70:
                         return row["age"] + 20 - row["yrscontribution"]
                     elif row["yrscontribution"] + 70 - row["age"] >= 5:
@@ -141,7 +188,7 @@ def italy_age_early(row):
                 return row["age"] + 40 - row["yrscontribution"]
             else:
                 return np.nan
-    # Wave 6
+    # Waves 5 and 6
     else:
         if row["yr1contribution"] >= 1996:
             if row["yrscontribution"] + 63.25 - row["age"] >= 20:

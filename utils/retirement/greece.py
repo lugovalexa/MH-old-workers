@@ -16,6 +16,12 @@ def greece_age(row):
                 return 65
             else:
                 return row["age"] + 15 - row["yrscontribution"]
+    # Wave :
+    elif row["wave"] == 5:
+        if row["yrscontribution"] + 65 - row["age"] >= 15:
+            return 65
+        else:
+            return row["age"] + 15 - row["yrscontribution"]
     # Wave 6
     else:
         if row["yrscontribution"] + 67 - row["age"] >= 15:
@@ -35,7 +41,7 @@ def greece_age_early(row):
             return row["age"] + 35 - row["yrscontribution"]
         else:
             return np.nan
-    # Wave 6
+    # Waves 5 and 6
     else:
         if row["age"] + 37 - row["yrscontribution"] < row["retirement_age"]:
             return row["age"] + 37 - row["yrscontribution"]
