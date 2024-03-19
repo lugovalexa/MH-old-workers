@@ -192,55 +192,92 @@ def share_final_preprocessing(df):
     print(f"N obs after data types: {len(df)}")
 
     # Leave only individuals present at least in two waves
-    id_counts = df["mergeid"].value_counts()
-    ids_to_keep = id_counts[id_counts >= 2].index
-    df = df[df["mergeid"].isin(ids_to_keep)].reset_index(drop=True)
+    # id_counts = df["mergeid"].value_counts()
+    # ids_to_keep = id_counts[id_counts >= 2].index
+    # df = df[df["mergeid"].isin(ids_to_keep)].reset_index(drop=True)
 
-    print("Only those present in at least 2 waves left")
-    print(f"N obs after id filter: {len(df)}")
+    # print("Only those present in at least 2 waves left")
+    # print(f"N obs after id filter: {len(df)}")
 
     # Set legal retirement age
 
     # Synthesize data for wave 4 when missing
-    mergeid_counts4 = df[df["wave"].isin([5, 6])]["mergeid"].value_counts()
-    unique_mergeids4 = mergeid_counts4[mergeid_counts4 == 2].index
-    mergeid_counts41 = df[df["wave"] == 4]["mergeid"].value_counts()
-    unique_mergeids41 = mergeid_counts41.index
+    # mergeid_counts4 = df[df["wave"].isin([5, 6])]["mergeid"].value_counts()
+    # unique_mergeids4 = mergeid_counts4[mergeid_counts4 == 2].index
+    # unique_mergeids4 = mergeid_counts4.index
+    # mergeid_counts41 = df[df["wave"] == 4]["mergeid"].value_counts()
+    # unique_mergeids41 = mergeid_counts41.index
+    # unique_rows4 = df[
+    #    (df["mergeid"].isin(unique_mergeids4))
+    #    & (~df["mergeid"].isin(unique_mergeids41))
+    # ]
+    # unique_rows4 = unique_rows4[unique_rows4.wave == 5].reset_index(drop=True)
+    # unique_rows4["age"] = unique_rows4["age"] - 2
+    # unique_rows4["year"] = unique_rows4["year"] - 2
+    # unique_rows4["yrscontribution"] = unique_rows4["yrscontribution"] - 2
+    # unique_rows4["wave"] = unique_rows4["wave"] - 1
+
+    # Synthesize data for wave 5 when missing
+    # mergeid_counts5 = df[df["wave"].isin([4, 6])]["mergeid"].value_counts()
+    # unique_mergeids5 = mergeid_counts5[mergeid_counts5 == 2].index
+    # mergeid_counts51 = df[df["wave"] == 5]["mergeid"].value_counts()
+    # unique_mergeids51 = mergeid_counts51.index
+    # unique_rows5 = df[
+    #     (df["mergeid"].isin(unique_mergeids5))
+    #     & (~df["mergeid"].isin(unique_mergeids51))
+    # ]
+    # unique_rows5 = unique_rows5[unique_rows5.wave == 6].reset_index(drop=True)
+    # unique_rows5["age"] = unique_rows5["age"] - 2
+    # unique_rows5["year"] = unique_rows5["year"] - 2
+    # unique_rows5["yrscontribution"] = unique_rows5["yrscontribution"] - 2
+    # unique_rows5["wave"] = unique_rows5["wave"] - 1
+
+    # Synthesize data for wave 6 when missing
+    # mergeid_counts6 = df[df["wave"].isin([4, 5])]["mergeid"].value_counts()
+    # unique_mergeids6 = mergeid_counts6[mergeid_counts6 == 2].index
+    # mergeid_counts61 = df[df["wave"] == 6]["mergeid"].value_counts()
+    # unique_mergeids61 = mergeid_counts61.index
+    # unique_rows6 = df[
+    #     (df["mergeid"].isin(unique_mergeids6))
+    #     & (~df["mergeid"].isin(unique_mergeids61))
+    # ]
+    # unique_rows6 = unique_rows6[unique_rows6.wave == 5].reset_index(drop=True)
+    # unique_rows6["age"] = unique_rows6["age"] + 2
+    # unique_rows6["year"] = unique_rows6["year"] + 2
+    # unique_rows6["yrscontribution"] = unique_rows6["yrscontribution"] + 2
+    # unique_rows6["wave"] = unique_rows6["wave"] + 1
+
+    unique_mergeids6 = df[df["wave"] == 6]["mergeid"].unique()
+    unique_mergeids5 = df[df["wave"] == 5]["mergeid"].unique()
+    unique_mergeids4 = df[df["wave"] == 4]["mergeid"].unique()
+
     unique_rows4 = df[
-        (df["mergeid"].isin(unique_mergeids4))
-        & (~df["mergeid"].isin(unique_mergeids41))
-    ]
-    unique_rows4 = unique_rows4[unique_rows4.wave == 5].reset_index(drop=True)
+        (df["wave"] == 5) & (~df["mergeid"].isin(unique_mergeids4))
+    ].reset_index(drop=True)
     unique_rows4["age"] = unique_rows4["age"] - 2
     unique_rows4["year"] = unique_rows4["year"] - 2
     unique_rows4["yrscontribution"] = unique_rows4["yrscontribution"] - 2
     unique_rows4["wave"] = unique_rows4["wave"] - 1
 
-    # Synthesize data for wave 5 when missing
-    mergeid_counts5 = df[df["wave"].isin([4, 6])]["mergeid"].value_counts()
-    unique_mergeids5 = mergeid_counts5[mergeid_counts5 == 2].index
-    mergeid_counts51 = df[df["wave"] == 5]["mergeid"].value_counts()
-    unique_mergeids51 = mergeid_counts51.index
     unique_rows5 = df[
-        (df["mergeid"].isin(unique_mergeids5))
-        & (~df["mergeid"].isin(unique_mergeids51))
-    ]
-    unique_rows5 = unique_rows5[unique_rows5.wave == 6].reset_index(drop=True)
+        (df["wave"] == 6) & (~df["mergeid"].isin(unique_mergeids5))
+    ].reset_index(drop=True)
     unique_rows5["age"] = unique_rows5["age"] - 2
     unique_rows5["year"] = unique_rows5["year"] - 2
     unique_rows5["yrscontribution"] = unique_rows5["yrscontribution"] - 2
     unique_rows5["wave"] = unique_rows5["wave"] - 1
 
-    # Synthesize data for wave 6 when missing
-    mergeid_counts6 = df[df["wave"].isin([4, 5])]["mergeid"].value_counts()
-    unique_mergeids6 = mergeid_counts6[mergeid_counts6 == 2].index
-    mergeid_counts61 = df[df["wave"] == 6]["mergeid"].value_counts()
-    unique_mergeids61 = mergeid_counts61.index
+    unique_rows51 = df[
+        (df["wave"] == 4) & (~df["mergeid"].isin(unique_mergeids5))
+    ].reset_index(drop=True)
+    unique_rows51["age"] = unique_rows51["age"] + 2
+    unique_rows51["year"] = unique_rows51["year"] + 2
+    unique_rows51["yrscontribution"] = unique_rows51["yrscontribution"] + 2
+    unique_rows51["wave"] = unique_rows51["wave"] + 1
+
     unique_rows6 = df[
-        (df["mergeid"].isin(unique_mergeids6))
-        & (~df["mergeid"].isin(unique_mergeids61))
-    ]
-    unique_rows6 = unique_rows6[unique_rows6.wave == 5].reset_index(drop=True)
+        (df["wave"] == 5) & (~df["mergeid"].isin(unique_mergeids6))
+    ].reset_index(drop=True)
     unique_rows6["age"] = unique_rows6["age"] + 2
     unique_rows6["year"] = unique_rows6["year"] + 2
     unique_rows6["yrscontribution"] = unique_rows6["yrscontribution"] + 2
@@ -249,9 +286,9 @@ def share_final_preprocessing(df):
     # Block of waves 4 and 5
     # Concatenate additional synthetisized data with main df
     retirement1 = pd.concat(
-        [df[df.wave.isin([4, 5])], unique_rows4, unique_rows5], ignore_index=True
+        [df[df.wave.isin([4, 5])], unique_rows4, unique_rows51], ignore_index=True
     )
-    retirement1.reset_index(drop=True, inplace=True)
+    retirement1 = retirement1.reset_index(drop=True)
 
     # Run retirement age functions
     retirement1["retirement_age"] = retirement1.apply(calculate_retirement_age, axis=1)
@@ -329,7 +366,7 @@ def share_final_preprocessing(df):
     retirement2 = pd.concat(
         [df[df.wave.isin([5, 6])], unique_rows5, unique_rows6], ignore_index=True
     )
-    retirement2.reset_index(drop=True, inplace=True)
+    retirement2 = retirement2.reset_index(drop=True)
 
     # Run retirement age functions
     retirement2["retirement_age"] = retirement2.apply(calculate_retirement_age, axis=1)
@@ -441,7 +478,7 @@ def share_final_preprocessing(df):
     )
     df2["wblock56"] = 1
 
-    df = pd.concat([df1, df2], ignore_index=True).reset_index(drop=True)
+    df = pd.concat([df1, df2], ignore_index=True)
 
     print(
         "Retirement age, work horizon and work horizon change by reforms - calculated"
