@@ -45,12 +45,16 @@ def merge_share_ewcs(
 
     df = df.dropna(subset="jqi_sum").reset_index(drop=True)
 
-    # Ensure a balanced panel
-    # unique_mergeid_2011 = set(df[df.year == 2011]["mergeid"].unique())
-    # unique_mergeid_2015 = set(df[df.year == 2015]["mergeid"].unique())
-    # intersection_ids = unique_mergeid_2011.intersection(unique_mergeid_2015)
+    # Leave a balanced sample by block of waves
+    df1 = df[(df["wave"].isin([4, 5])) & (df["wblock56"] == 0)]
+    mergeid_counts = df1["mergeid"].value_counts()
+    df1 = df1[df1["mergeid"].isin(mergeid_counts[mergeid_counts == 2].index)]
 
-    # df = df[df["mergeid"].isin(intersection_ids)].reset_index(drop=True)
+    df2 = df[(df["wave"].isin([5, 6])) & (df["wblock56"] == 1)]
+    mergeid_counts = df2["mergeid"].value_counts()
+    df2 = df2[df2["mergeid"].isin(mergeid_counts[mergeid_counts == 2].index)]
+
+    df = pd.concat([df1, df2], ignore_index=True)
 
     # Save to output CSV
     df.to_csv(output_csv, index=False)
