@@ -533,4 +533,16 @@ def share_final_preprocessing(df):
     # Edit gender column
     df["gender"] = df["gender"].replace({"Male": 0, "Female": 1})
 
+    # Create variable first treated
+    first_treated_years = (
+        df.loc[(df["year"] > 2011) & (df["work_horizon_change_minimum"] > 0)]
+        .groupby("mergeid")["year"]
+        .min()
+        .reset_index()
+    )
+    first_treated_dict = dict(
+        zip(first_treated_years["mergeid"], first_treated_years["year"])
+    )
+    df["first_treated"] = df["mergeid"].map(lambda x: first_treated_dict.get(x, 0))
+
     return df

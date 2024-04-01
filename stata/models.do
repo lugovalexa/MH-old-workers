@@ -21,7 +21,7 @@ quietly su jqi_physical_environment , d
 scalar per25=r(p25)
 scalar per75=r(p75)
 keep if jqi_physical_environment <= per25
-*keep if jqi_physical_environment >= per75
+*keep if jqi_prospects >= per75
 
 *egen mean_jqi = mean(jqi_prospects)
 *egen sd_jqi = sd(jqi_prospects)
@@ -60,7 +60,7 @@ gen thinclog = log(thinc)
 
 *regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects jqi_sum i.cell1_encoded [aweight=cciw], vce(cluster cell1)
 
-regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion_w jqi_physical_environment_w jqi_social_environment_w jqi_working_time_quality_w jqi_intensity_w jqi_prospects_w jqi_sum_w i.cell2_encoded [aweight=cciw], vce(cluster cell2)
+regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects jqi_sum i.cell2_encoded [aweight=cciw], vce(cluster cell2)
 
 regress eurod i.did i.treated i.post i.cell2_encoded [aweight=cciw], vce(cluster cell2)
 

@@ -2,7 +2,7 @@
 cd "/Users/alexandralugova/Documents/GitHub/MH-old-workers/stata"
 
 * Data
-import delimited "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/3digits_country.csv", clear
+import delimited "/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/4digits_country.csv", clear
 
 * Create variables for DID
 gen post = (year == 2015) | (year == 2013 & wblock56 == 0)
@@ -29,18 +29,23 @@ gen thinclog = log(thinc)
 *egen mean_jqi = mean(jqi_prospects)
 *egen sd_jqi = sd(jqi_prospects)
 
-quietly su jqi_sum_w , d
+keep if gender==0
+
+quietly su jqi_sum , d
 scalar per25=r(p25)
 scalar per75=r(p75)
 
-keep if gender==0
 
 * Step 1: Run individual regressions
-qui regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion_w jqi_physical_environment_w jqi_social_environment_w jqi_working_time_quality_w jqi_intensity_w jqi_prospects_w jqi_sum_w i.cell1_encoded [aweight=cciw] if jqi_prospects_w <= per25
+qui regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects jqi_sum i.cell1_encoded [aweight=cciw] if jqi_sum <= per25
+
+*qui regress eurod i.did i.treated i.post i.cell1_encoded [aweight=cciw] if jqi_prospects <= per25
 
 est sto below
 
-qui regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion_w jqi_physical_environment_w jqi_social_environment_w jqi_working_time_quality_w jqi_intensity_w jqi_prospects_w jqi_sum_w i.cell1_encoded [aweight=cciw] if jqi_prospects_w >= per75
+qui regress eurod i.did i.treated i.post i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects jqi_sum i.cell1_encoded [aweight=cciw] if jqi_sum >= per75
+
+*qui regress eurod i.did i.treated i.post i.cell1_encoded [aweight=cciw] if jqi_prospects >= per75
 
 est sto above
 
