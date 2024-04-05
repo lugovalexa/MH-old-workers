@@ -535,7 +535,10 @@ def share_final_preprocessing(df):
 
     # Create variable first treated
     first_treated_years = (
-        df.loc[(df["year"] > 2011) & (df["work_horizon_change_minimum"] > 0)]
+        df.loc[
+            (((df.wblock56 == 0) & (df.wave == 5)) | (df.wave == 6))
+            & (df["work_horizon_change_minimum"] > 0)
+        ]
         .groupby("mergeid")["year"]
         .min()
         .reset_index()

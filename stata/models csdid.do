@@ -13,8 +13,7 @@ gen treated = (work_horizon_change_minimum > 0)
 
 * Additional variables
 gen cell1 = country + "_" + string(gender)
-gen cell2 = country + "_" + string(gender) + "_" + string(wblock56)
-*gen cell2 = country + "_" + string(work_horizon_change) + "_" + string(wblock56)
+gen cell2 = country + "_" + string(wblock56) + "_" + string(work_horizon_change)
 
 *sort cell1
 *by cell1: gen dupcount = _N
@@ -35,26 +34,25 @@ gen thinclog = log(thinc)
 keep if gender == 0
 
 * Filter by working conditions
-quietly su jqi_prospects , d
+quietly su jqi_working_time_quality , d
 scalar per25=r(p25)
-scalar per75=r(p75)
-keep if jqi_prospects <= per25
+*scalar per75=r(p75)
+keep if jqi_working_time_quality <= per25
 *keep if jqi_prospects >= per75
 
-*egen mean_jqi = mean(jqi_prospects)
-*egen sd_jqi = sd(jqi_prospects)
-*keep if jqi_prospects <= mean_jqi - sd_jqi
-*keep if jqi_prospects >= mean_jqi + sd_jqi
-*egen median_jqi = median(jqi_prospects_w)
-*keep if jqi_prospects_w < median_jqi
+*egen median_jqi = median(jqi_physical_environment)
+*keep if jqi_physical_environment < median_jqi
 
 
 * Regressions
-csdid  eurod , ivar(mergeid_encoded) time(year) gvar(first_treated) [notyet] cluster(cell1_encoded) method(dripw)
+*csdid  eurod , ivar(mergeid_encoded) time(year) gvar(first_treated) [notyet] cluster(cell1_encoded) method(dripw)
 
-csdid  eurod , time(year) gvar(first_treated) [notyet] cluster(cell1_encoded) method(dripw)
+*csdid  eurod , time(year) gvar(first_treated) [notyet] cluster(cell2_encoded) method(dripw)
 
-csdid  eurod age i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog  i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects jqi_sum , time(year) gvar(first_treated) [notyet] cluster(cell1_encoded) method(dripw)
+qui csdid  eurod [iw=my_wgt], ivar(mergeid_encoded) time(year) gvar(first_treated) [notyet] cluster(cell1_encoded) method(dripw)
+estat simple
 
+*csdid  eurod i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects jqi_sum , time(year) gvar(first_treated) [notyet] cluster(cell2_encoded) method(dripw)
 
-estat all
+qui csdid  eurod i.gender age agesq nb_children nb_grandchildren i.partnerinhh yrseducation thinclog i.life_insurance sphus chronic jqi_skills_discretion jqi_physical_environment jqi_social_environment jqi_working_time_quality jqi_intensity jqi_prospects jqi_sum [iw=my_wgt], ivar(mergeid_encoded) time(year) gvar(first_treated) [notyet] cluster(cell1_encoded) method(dripw)
+estat simple
