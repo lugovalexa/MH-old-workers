@@ -153,4 +153,5 @@ cython_debug/
 /data
 stata-weights/data
 stata-weights/SHARE Examples
+/R-models
 .Rproj.user
