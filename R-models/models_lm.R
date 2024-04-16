@@ -15,7 +15,7 @@ library(sandwich)
 library(fixest)
 
 # Data
-data <- read.csv("/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/4digits_year.csv")
+data <- read.csv("/Users/alexandralugova/Documents/GitHub/MH-old-workers/data/datasets/results/4digits_country.csv")
 
 # Additional variables
 data$age_squared <- data$age^2
@@ -147,18 +147,18 @@ my_data <- data.frame(
   model = c("Skills and discretion", "Skills and discretion", "Physical environment", "Physical environment",
             "Social environment", "Social environment", "Working time quality", "Working time quality",
             "Intensity", "Intensity", "Prospects", "Prospects"),
-  var = c("Above median", "Below median", "Above median", "Below median","Above median", "Below median",
-          "Above median", "Below median","Above median", "Below median","Above median", "Below median"),
-  value = c(0.132, 0.710, 0.335, 0.386, 0.213, 0.471, 0.284, 0.441, 0.154, 0.567, 0.329, 0.492),
-  ci_upper = c(0.132+0.144, 0.710+0.126, 0.335+0.144, 0.386+0.127,
-               0.213+0.128, 0.471+0.145, 0.284+0.147, 0.441+0.126,
-               0.154+0.157, 0.567+0.149, 0.329+0.145, 0.492+0.127),
-  ci_lower = c(0.132-0.144, 0.710-0.126, 0.335-0.144, 0.386-0.127,
-               0.213-0.128, 0.471-0.145, 0.284-0.147, 0.441-0.126,
-               0.154-0.157, 0.567-0.149, 0.329-0.145, 0.492-0.127)
+  var = c("Above 75th percentile", "Below 25th percentile", "Above 75th percentile", "Below 25th percentile","Above 75th percentile", "Below 25th percentile",
+          "Above 75th percentile", "Below 25th percentile","Above 75th percentile", "Below 25th percentile","Above 75th percentile", "Below 25th percentile"),
+  value = c(-0.058, 0.166, -0.076, 0.612, -0.055, 0.067, 0.026, 0.626, -0.121, 0.611, -0.204, 0.385),
+  ci_upper = c(-0.058+0.231, 0.166+0.227, -0.076+0.153, 0.612+0.296,
+               -0.055+0.140, 0.067+0.149, 0.026+0.319, 0.626+0.257,
+               -0.121+0.254, 0.611+0.269, -0.204+0.405, 0.385+0.248),
+  ci_lower = c(-0.058-0.231, 0.166-0.227, -0.076-0.153, 0.612-0.296,
+               -0.055-0.140, 0.067-0.149, 0.026-0.319, 0.626-0.257,
+               -0.121-0.254, 0.611-0.269, -0.204-0.405, 0.385-0.248)
 )
 
-my_colors <- c("Above median" = "darkgray", "Below median" = "darkblue")
+my_colors <- c("Above 75th percentile" = "darkgray", "Below 25th percentile" = "darkblue")
 
 ggplot(my_data, aes(x = model, y = value, color = var)) +
   geom_point(position = position_dodge(0.5)) +
