@@ -1,12 +1,10 @@
 import os
 
+import numpy as np
 import pandas as pd
 
 
-def merge_share_ewcs(
-    output_csv,
-    convert_to_3_digits=False,
-):
+def merge_share_ewcs(output_csv, convert_to_3_digits=False, balanced=False):
     """
     Merge two datasets (SHARE and EWCS) based on specified conditions.
 
@@ -45,16 +43,44 @@ def merge_share_ewcs(
 
     df = df.dropna(subset="jqi_sum").reset_index(drop=True)
 
-    # Leave a balanced sample by block of waves
-    df1 = df[(df["wave"].isin([4, 5])) & (df["wblock56"] == 0)]
-    mergeid_counts = df1["mergeid"].value_counts()
-    df1 = df1[df1["mergeid"].isin(mergeid_counts[mergeid_counts == 2].index)]
+    # Create harmonized cciw weight
+    grouped = (
+        df.groupby("mergeid")[["cciw_w4", "cciw_w5", "cciw_w6"]].mean().reset_index()
+    )
+    grouped["cciw_new"] = grouped[["cciw_w4", "cciw_w5", "cciw_w6"]].mean(axis=1)
+    df = pd.merge(df, grouped[["mergeid", "cciw_new"]], on="mergeid", how="left")
 
-    df2 = df[(df["wave"].isin([5, 6])) & (df["wblock56"] == 1)]
-    mergeid_counts = df2["mergeid"].value_counts()
-    df2 = df2[df2["mergeid"].isin(mergeid_counts[mergeid_counts == 2].index)]
+    # Create some new variables
+    df["post"] = ((df["year"] == 2013) & (df["wblock56"] == 0)) | (df["year"] == 2015)
+    df["post"] = df["post"].astype(int)
 
-    df = pd.concat([df1, df2], ignore_index=True)
+    df["cell"] = (
+        df["country"]
+        + "_"
+        + df["gender"].astype(str)
+        + "_"
+        + df["wblock56"].astype(str)
+    )
+    df["cell_encoded"] = pd.factorize(df["cell"])[0]
 
-    # Save to output CSV
-    df.to_csv(output_csv, index=False)
+    df["mergeid_encoded"] = pd.factorize(df["mergeid"])[0]
+
+    df["agesq"] = df["age"] ** 2
+    df["thinclog"] = np.log(df["thinc"])
+
+    if balanced:
+        # Leave a balanced sample by block of waves
+        df1 = df[(df["wave"].isin([4, 5])) & (df["wblock56"] == 0)]
+        mergeid_counts = df1["mergeid"].value_counts()
+        df1 = df1[df1["mergeid"].isin(mergeid_counts[mergeid_counts == 2].index)]
+
+        df2 = df[(df["wave"].isin([5, 6])) & (df["wblock56"] == 1)]
+        mergeid_counts = df2["mergeid"].value_counts()
+        df2 = df2[df2["mergeid"].isin(mergeid_counts[mergeid_counts == 2].index)]
+
+        df = pd.concat([df1, df2], ignore_index=True)
+
+        # Save to output CSV
+        df.to_csv(output_csv, index=False)
+    else:
+        df.to_csv(output_csv, index=False)
